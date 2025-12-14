@@ -19,29 +19,21 @@ public class MyCallScreeningService extends CallScreeningService {
     public void onScreenCall(@NonNull Call.Details callDetails) {
         String phoneNumber = null;
 
-        // Lấy số điện thoại
+        // === TRƯỜNG 1: Phone Number - Quan trọng nhất ===
         if (callDetails.getHandle() != null) {
             phoneNumber = callDetails.getHandle().getSchemeSpecificPart();
         }
 
         if (phoneNumber == null || phoneNumber.isEmpty()) {
             Log.w(TAG, "No phone number available");
-            respondToCall(callDetails,
-                    new CallResponse.Builder()
-                            .setDisallowCall(false)
-                            .setRejectCall(false)
-                            .setSkipCallLog(false)
-                            .setSkipNotification(false)
-                            .build()
-            );
+            respondToCall(callDetails, buildAllowResponse());
             return;
         }
 
-        // Tạo CallDetailsHolder với thông tin chi tiết
         CallDetailsHolder holder = new CallDetailsHolder();
         holder.setPhoneNumber(phoneNumber);
 
-        // Lấy Verification Status
+        // === TRƯỜNG 2: Caller Number Verification Status - Phát hiện giả mạo ===
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             int verificationStatus = callDetails.getCallerNumberVerificationStatus();
             switch (verificationStatus) {
@@ -50,45 +42,77 @@ public class MyCallScreeningService extends CallScreeningService {
                     break;
                 case Connection.VERIFICATION_STATUS_FAILED:
                     holder.setVerificationStatus("FAILED");
+                    Log.w(TAG, "🚨 SPAM - Verification Failed: " + phoneNumber);
                     break;
                 case Connection.VERIFICATION_STATUS_NOT_VERIFIED:
                 default:
                     holder.setVerificationStatus("NOT_VERIFIED");
             }
-        }
-
-        // Lấy Call Type
-        int callDirection = callDetails.getCallDirection();
-        if (callDirection == Call.Details.DIRECTION_INCOMING) {
-            holder.setCallType("CALL_TYPE_INCOMING");
-        } else if (callDirection == Call.Details.DIRECTION_OUTGOING) {
-            holder.setCallType("CALL_TYPE_OUTGOING");
         } else {
-            holder.setCallType("CALL_TYPE_UNKNOWN");
+            holder.setVerificationStatus("NOT_AVAILABLE");
         }
 
-        // Lấy Caller Display Name
-        if (callDetails.getCallerDisplayName() != null) {
-            holder.setCallerDisplayName(callDetails.getCallerDisplayName());
+        // === TRƯỜNG 3: Handle Presentation - Phát hiện số ẩn ===
+        int presentation = callDetails.getHandlePresentation();
+        String presentationStr;
+        switch (presentation) {
+            case 1: // PRESENTATION_ALLOWED
+                presentationStr = "ALLOWED";
+                break;
+            case 2: // PRESENTATION_RESTRICTED
+                presentationStr = "RESTRICTED"; // Số ẩn - Nghi spam cao!
+                Log.w(TAG, "RESTRICTED NUMBER (Hidden) - High spam risk");
+                break;
+            case 3: // PRESENTATION_UNKNOWN
+                presentationStr = "UNKNOWN";
+                Log.w(TAG, "UNKNOWN PRESENTATION - Medium spam risk");
+                break;
+            case 4: // PRESENTATION_PAYPHONE
+                presentationStr = "PAYPHONE";
+                break;
+            default:
+                presentationStr = "UNDEFINED";
+        }
+        holder.setHandlePresentation(presentationStr);
+
+        // === TRƯỜNG 4: Caller Display Name - Tên carrier cung cấp ===
+        String callerDisplayName = callDetails.getCallerDisplayName();
+        if (callerDisplayName != null && !callerDisplayName.isEmpty()) {
+            holder.setCallerDisplayName(callerDisplayName);
+
+            // Check spam keywords từ carrier
+            String lowerName = callerDisplayName.toLowerCase();
+            if (lowerName.contains("spam") ||
+                    lowerName.contains("scam") ||
+                    lowerName.contains("fraud") ||
+                    lowerName.contains("telemarketer") ||
+                    lowerName.contains("robocall")) {
+                Log.w(TAG, "SPAM - Carrier marked as: " + callerDisplayName);
+            }
+        } else {
+            holder.setCallerDisplayName("UNKNOWN");
         }
 
-        Log.d(TAG, "📋 Call Details:");
-        Log.d(TAG, "   Number: " + phoneNumber);
-        Log.d(TAG, "   Verification: " + holder.getVerificationStatus());
-        Log.d(TAG, "   Type: " + holder.getCallType());
-        Log.d(TAG, "   Display Name: " + holder.getCallerDisplayName());
+        // Log tổng hợp
+        Log.d(TAG, "📋 Call Details Summary:");
+        Log.d(TAG, "   1. Number: " + phoneNumber);
+        Log.d(TAG, "   2. Verification: " + holder.getVerificationStatus());
+        Log.d(TAG, "   3. Presentation: " + holder.getHandlePresentation());
+        Log.d(TAG, "   4. Display Name: " + holder.getCallerDisplayName());
 
         // Truyền sang AutoReceiveSpamService
         AutoReceiveSpamService.setPendingCallDetails(holder);
 
-        // Cho phép cuộc gọi đi qua (không chặn)
-        respondToCall(callDetails,
-                new CallResponse.Builder()
-                        .setDisallowCall(false)
-                        .setRejectCall(false)
-                        .setSkipCallLog(false)
-                        .setSkipNotification(false)
-                        .build()
-        );
+        // Cho phép cuộc gọi đi qua (không chặn ở đây)
+        respondToCall(callDetails, buildAllowResponse());
+    }
+
+    private CallResponse buildAllowResponse() {
+        return new CallResponse.Builder()
+                .setDisallowCall(false)
+                .setRejectCall(false)
+                .setSkipCallLog(false)
+                .setSkipNotification(false)
+                .build();
     }
 }

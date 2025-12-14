@@ -29,6 +29,7 @@ public class SttResultReceiver extends BroadcastReceiver {
         }
 
         if (transcript == null) transcript = "";
+        Log.d(TAG, "Received STT result for " + requestId + ": " + transcript);
 
         FirebaseFirestore.getInstance()
                 .collection("tool_call_logs")

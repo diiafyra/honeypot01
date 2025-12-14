@@ -3,19 +3,18 @@ package com.example.honeypot01.model;
 public class CallDetailsHolder {
     private String phoneNumber;
     private String verificationStatus;
-    private String callType;
+    private String handlePresentation;
     private String callerDisplayName;
     public CallDetailsHolder() {
         this.verificationStatus = "NOT_VERIFIED";
-        this.callType = "UNKNOWN";
+        this.handlePresentation = "UNKNOWN"; // ← Đổi tên
         this.callerDisplayName = "";
     }
 
-    public CallDetailsHolder(String phoneNumber, String verificationStatus,
-                             String callType, String callerDisplayName) {
+    public CallDetailsHolder(String phoneNumber, String verificationStatus, String handlePresentation, String callerDisplayName) {
         this.phoneNumber = phoneNumber;
         this.verificationStatus = verificationStatus;
-        this.callType = callType;
+        this.handlePresentation = handlePresentation; // ← Đổi tên
         this.callerDisplayName = callerDisplayName;
     }
 
@@ -28,12 +27,13 @@ public class CallDetailsHolder {
         this.verificationStatus = verificationStatus;
     }
 
-    public String getCallType() { return callType; }
-    public void setCallType(String callType) { this.callType = callType; }
+    public String getHandlePresentation() { return handlePresentation; } // ← Đổi tên
+    public void setHandlePresentation(String handlePresentation) { // ← Đổi tên
+        this.handlePresentation = handlePresentation;
+    }
 
     public String getCallerDisplayName() { return callerDisplayName; }
     public void setCallerDisplayName(String callerDisplayName) {
         this.callerDisplayName = callerDisplayName;
     }
-
 }

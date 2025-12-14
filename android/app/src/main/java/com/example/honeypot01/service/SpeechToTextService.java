@@ -13,6 +13,8 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 
+import com.example.honeypot01.receiver.SttResultReceiver;
+
 import org.json.JSONObject;
 import org.vosk.Model;
 import org.vosk.Recognizer;
@@ -649,16 +651,19 @@ public class SpeechToTextService extends IntentService {
     }
 
     private void broadcastSuccess(String requestId, String transcript) {
-        Intent result = new Intent(ACTION_STT_RESULT);
+        Intent result = new Intent(this, SttResultReceiver.class); // context là Service hoặc Activity
         result.putExtra(EXTRA_REQUEST_ID, requestId);
         result.putExtra(EXTRA_TRANSCRIPT, transcript);
-        sendBroadcast(result);
+        this.sendBroadcast(result);
+
+
     }
 
     private void broadcastError(String requestId, String error) {
-        Intent result = new Intent(ACTION_STT_RESULT);
+        Intent result = new Intent(this, SttResultReceiver.class);
         result.putExtra(EXTRA_REQUEST_ID, requestId);
         result.putExtra(EXTRA_ERROR, error);
-        sendBroadcast(result);
+        this.sendBroadcast(result);
+
     }
 }

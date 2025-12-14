@@ -66,7 +66,7 @@ public class AutoReceiveSpamService extends AccessibilityService {
     public static void setPendingCallDetails(CallDetailsHolder callDetails) {
         pendingCallDetails = callDetails;
         Log.d(TAG, "Pending call details set: " + callDetails.getPhoneNumber() +
-                " | Type: " + callDetails.getCallType() +
+                " | Type: " + callDetails.getHandlePresentation()+
                 " | Verification: " + callDetails.getVerificationStatus());
     }
 

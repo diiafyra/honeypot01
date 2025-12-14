@@ -40,8 +40,8 @@ public class SpamNumber {
     @PropertyName("verification_status")
     private String verificationStatus;
 
-    @PropertyName("call_type")
-    private String callType;
+    @PropertyName("handle_presentation") // ← THAY call_type
+    private String handlePresentation;
 
     @PropertyName("caller_display_name")
     private String callerDisplayName;
@@ -51,26 +51,21 @@ public class SpamNumber {
 
     public SpamNumber(String phoneNumber,
                       String verificationStatus,
-                      String callType,
+                      String handlePresentation, // ← Đổi tham số
                       String callerDisplayName) {
 
         long now = System.currentTimeMillis();
 
         this.phoneNumber = phoneNumber;
-
         this.label = "unknown";
         this.confidence = "0";
 
-        this.callCount = 1;
-
         this.createDate = now;
         this.lastSeen = now;
-        this.lastUpdate = now;
-
         this.source = 1;
 
         this.verificationStatus = verificationStatus;
-        this.callType = callType;
+        this.handlePresentation = handlePresentation; // ← Đổi tên
         this.callerDisplayName = callerDisplayName;
     }
 
@@ -99,11 +94,14 @@ public class SpamNumber {
     @PropertyName("verification_status")
     public String getVerificationStatus() { return verificationStatus; }
 
-    @PropertyName("call_type")
-    public String getCallType() { return callType; }
+    @PropertyName("handle_presentation") // ← THAY call_type
+    public String getHandlePresentation() { return handlePresentation; }
 
     @PropertyName("caller_display_name")
     public String getCallerDisplayName() { return callerDisplayName; }
+
+    @Exclude
+    public String getPhoneNumber() { return phoneNumber; }
 
     @NonNull
     @Override

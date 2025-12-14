@@ -65,27 +65,25 @@ public class CallDataManager {
         SpamNumber initData = new SpamNumber(
                 spamNumber,
                 callDetails.getVerificationStatus(),
-                callDetails.getCallType(),
+                callDetails.getHandlePresentation(),
                 callDetails.getCallerDisplayName()
         );
 
         Log.d(TAG, "🔄 Upserting SpamNumber: " + initData);
 
-        // Tạo doc nếu chưa có
-        ref.set(initData, SetOptions.merge());
+        ref.get().addOnSuccessListener(snapshot -> {
+            if (!snapshot.exists()) {
+                // Tạo document mới mà không set callCount
+                ref.set(initData, SetOptions.merge());
+            }
+            // Luôn increment call_count
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("call_count", FieldValue.increment(1));
+            updates.put("last_seen", System.currentTimeMillis());
 
-        // 2️⃣ Update cho cả 2 trường hợp
-        Map<String, Object> updates = new HashMap<>();
-        long now = System.currentTimeMillis();
+            ref.update(updates);
+        });
 
-        updates.put("call_count", FieldValue.increment(1));
-        updates.put("last_seen", now);
-
-        ref.update(updates)
-                .addOnSuccessListener(v ->
-                        Log.d(TAG, "✅ SpamNumber updated: " + spamNumber))
-                .addOnFailureListener(e ->
-                        Log.e(TAG, "❌ SpamNumber update failed", e));
     }
 
     // ================= TOOL CALL LOG =================
