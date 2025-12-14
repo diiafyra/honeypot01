@@ -7,6 +7,7 @@ import android.util.Log;
 import com.example.honeypot01.model.CallDetailsHolder;
 import com.example.honeypot01.model.SpamNumber;
 import com.example.honeypot01.model.ToolCallLog;
+import com.example.honeypot01.stt.SttAfterCallLinker;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
@@ -16,7 +17,10 @@ import com.google.firebase.firestore.SetOptions;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CallDataManager {
+public class CallDataManager {  
+        
+    private final Context appContext;
+
 
     private static final String TAG = "CallDataManager";
     private static final String PREFS_NAME = "HoneypotPrefs";
@@ -26,6 +30,9 @@ public class CallDataManager {
     private final SharedPreferences prefs;
 
     public CallDataManager(Context context) {
+        
+        this.appContext = context.getApplicationContext();
+
         this.db = FirebaseFirestore.getInstance();
         this.prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
@@ -99,8 +106,13 @@ public class CallDataManager {
 
         db.collection("tool_call_logs")
                 .add(log)
-                .addOnSuccessListener(docRef ->
-                        Log.d(TAG, "✅ Call log saved: " + spamNumber))
+                .addOnSuccessListener(docRef -> {
+                    Log.d(TAG, "✅ Call log saved: " + spamNumber);
+
+                    // STT linking được tách sang file riêng để giảm ảnh hưởng lên code hiện tại.
+                    // request_id = docId để Receiver update field `transcript` đúng document.
+                    SttAfterCallLinker.maybeStart(appContext, docRef.getId(), now);
+                })
                 .addOnFailureListener(e ->
                         Log.e(TAG, "❌ Failed to save call log", e));
     }

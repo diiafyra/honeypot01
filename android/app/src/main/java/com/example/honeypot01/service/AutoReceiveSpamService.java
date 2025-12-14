@@ -70,6 +70,7 @@ public class AutoReceiveSpamService extends AccessibilityService {
                 " | Verification: " + callDetails.getVerificationStatus());
     }
 
+
     private void registerPhoneStateListener() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
                 != PackageManager.PERMISSION_GRANTED) {

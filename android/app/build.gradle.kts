@@ -43,6 +43,7 @@ android {
 }
 dependencies {
     implementation("com.google.firebase:firebase-firestore:26.0.2")
+    implementation("com.alphacephei:vosk-android:0.3.47")
 }
 
 flutter {

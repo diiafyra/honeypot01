@@ -25,6 +25,7 @@ public class MainActivity extends FlutterActivity {
     // Request codes
     private static final int REQUEST_PHONE_PERMISSIONS = 100;
     private static final int REQUEST_ANSWER_CALLS = 101;
+    private static final int REQUEST_AUDIO_PERMISSIONS = 103;
     private static final int REQUEST_CALL_SCREENING_ROLE = 102;
 
     @Override
@@ -54,6 +55,15 @@ public class MainActivity extends FlutterActivity {
     private void logPermissionStatus() {
         boolean hasReadPhone = hasPermission(Manifest.permission.READ_PHONE_STATE);
         Log.d(TAG, (hasReadPhone ? "✅" : "❌") + " READ_PHONE_STATE");
+
+        // Quyền đọc audio để truy cập thư mục Recordings/Call (phục vụ STT)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            boolean hasReadAudio = hasPermission(Manifest.permission.READ_MEDIA_AUDIO);
+            Log.d(TAG, (hasReadAudio ? "✅" : "❌") + " READ_MEDIA_AUDIO");
+        } else {
+            boolean hasReadStorage = hasPermission(Manifest.permission.READ_EXTERNAL_STORAGE);
+            Log.d(TAG, (hasReadStorage ? "✅" : "❌") + " READ_EXTERNAL_STORAGE");
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             boolean hasAnswerCalls = hasPermission(Manifest.permission.ANSWER_PHONE_CALLS);
@@ -143,11 +153,42 @@ public class MainActivity extends FlutterActivity {
             } else {
                 Log.d(TAG, "✅ ANSWER_PHONE_CALLS already granted");
                 // Chuyển sang bước tiếp theo
-                requestCallScreeningRole();
+                requestAudioReadPermission();
             }
         } else {
             // Android < 8: Không cần permission này
-            requestCallScreeningRole();
+            requestAudioReadPermission();
+        }
+    }
+
+    /**
+     * BƯỚC 2.5: Xin quyền đọc audio (Recordings/Call) để STT đọc file ghi âm
+     */
+    private void requestAudioReadPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (!hasPermission(Manifest.permission.READ_MEDIA_AUDIO)) {
+                Log.d(TAG, "🎧 Requesting READ_MEDIA_AUDIO Permission...");
+                ActivityCompat.requestPermissions(
+                        this,
+                        new String[]{Manifest.permission.READ_MEDIA_AUDIO},
+                        REQUEST_AUDIO_PERMISSIONS
+                );
+            } else {
+                Log.d(TAG, "✅ READ_MEDIA_AUDIO already granted");
+                requestCallScreeningRole();
+            }
+        } else {
+            if (!hasPermission(Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                Log.d(TAG, "🗂️ Requesting READ_EXTERNAL_STORAGE Permission...");
+                ActivityCompat.requestPermissions(
+                        this,
+                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        REQUEST_AUDIO_PERMISSIONS
+                );
+            } else {
+                Log.d(TAG, "✅ READ_EXTERNAL_STORAGE already granted");
+                requestCallScreeningRole();
+            }
         }
     }
 
@@ -246,13 +287,25 @@ public class MainActivity extends FlutterActivity {
                     Log.d(TAG, "✅ ANSWER_PHONE_CALLS GRANTED");
                     Toast.makeText(this, "✅ Answer calls permission granted", Toast.LENGTH_SHORT).show();
                     // Tiếp tục bước tiếp theo
-                    requestCallScreeningRole();
+                    requestAudioReadPermission();
                 } else {
                     Log.e(TAG, "❌ ANSWER_PHONE_CALLS DENIED");
                     Toast.makeText(this, "❌ Answer calls permission denied", Toast.LENGTH_LONG).show();
                     // Vẫn tiếp tục
-                    requestCallScreeningRole();
+                    requestAudioReadPermission();
                 }
+                break;
+
+            case REQUEST_AUDIO_PERMISSIONS:
+                if (allGranted) {
+                    Log.d(TAG, "✅ Audio read permission GRANTED");
+                    Toast.makeText(this, "✅ Audio read permission granted", Toast.LENGTH_SHORT).show();
+                } else {
+                    Log.e(TAG, "❌ Audio read permission DENIED");
+                    Toast.makeText(this, "❌ Audio read permission denied - STT may not work", Toast.LENGTH_LONG).show();
+                }
+                // Dù granted hay không, vẫn tiếp tục flow chính
+                requestCallScreeningRole();
                 break;
         }
     }
