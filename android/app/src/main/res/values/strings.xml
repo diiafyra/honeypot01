@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">Auto Receive Spam Service. Tự động nhận cuộc gọi và bật loa. Dịch vụ cần quyền Accessibility để phát hiện cuộc gọi đến.
+    </string>
+</resources>

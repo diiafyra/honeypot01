@@ -1,0 +1,57 @@
+    private boolean clickAnswerButton() {
+        try {
+            AccessibilityNodeInfo root = getRootInActiveWindow();
+            if (root == null) return false;
+
+            boolean found = findAndClick(root);
+            root.recycle();
+
+            if (found) {
+                Log.d(TAG, "Answered by clicking button");
+            }
+            return found;
+        } catch (Exception e) {
+            Log.e(TAG, "Click failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean findAndClick(AccessibilityNodeInfo node) {
+        if (node == null) return false;
+
+        String[] texts = {"answer", "accept", "nhận", "trả lời", "pick"};
+        for (String text : texts) {
+            List<AccessibilityNodeInfo> nodes = node.findAccessibilityNodeInfosByText(text);
+            for (AccessibilityNodeInfo n : nodes) {
+                if ((n.isClickable() || n.isEnabled()) &&
+                        n.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                    Log.d(TAG, "Clicked: " + text);
+                    return true;
+                }
+            }
+        }
+
+        CharSequence desc = node.getContentDescription();
+        if (desc != null) {
+            String descStr = desc.toString().toLowerCase();
+            for (String text : texts) {
+                if (descStr.contains(text) &&
+                        (node.isClickable() || node.isEnabled()) &&
+                        node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                    Log.d(TAG, "Clicked desc: " + descStr);
+                    return true;
+                }
+            }
+        }
+
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo child = node.getChild(i);
+            if (child != null) {
+                boolean found = findAndClick(child);
+                child.recycle();
+                if (found) return true;
+            }
+        }
+
+        return false;
+    }
