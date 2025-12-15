@@ -20,7 +20,7 @@ public final class SttAfterCallLinker {
     // Theo yêu cầu: Internal Storage > Recordings > Call
     // Android path thường là: /storage/emulated/0/Recordings/Call
 //    private static final String RECORDINGS_CALL_RELATIVE_DIR = "Recordings/Call";
-    private static final String RECORDINGS_CALL_RELATIVE_DIR = "MIUI/sound_recorder/call_rec";
+    private static final String RECORDINGS_CALL_RELATIVE_DIR = "Internal storage/Recordings";
 
     // Chỉ chọn file có lastModified gần thời điểm call kết thúc để giảm rủi ro chọn nhầm.
     // (Tuỳ thực tế thiết bị/ứng dụng ghi âm, có thể cần tăng giảm window.)

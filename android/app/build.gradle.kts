@@ -40,12 +40,32 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // FFmpegKit thường kéo theo libc++_shared.so; pickFirst giúp tránh lỗi duplicate khi build.
+    packaging {
+        jniLibs {
+            pickFirsts += setOf("**/libc++_shared.so")
+        }
+        resources {
+            excludes += setOf("/META-INF/{AL2.0,LGPL2.1}")
+        }
+    }
+}
+
+// FFmpegKit manual install (không phụ thuộc Maven/JitPack).
+// Copy *.aar vào thư mục: android/app/libs/
+repositories {
+    flatDir { dirs("libs") }
 }
 dependencies {
     implementation("com.google.firebase:firebase-firestore:26.0.2")
     implementation("com.alphacephei:vosk-android:0.3.47")
-}
 
+    implementation(fileTree(mapOf(
+        "dir" to "libs",
+        "include" to listOf("*.aar", "*.jar")
+    )))
+}
 flutter {
     source = "../.."
 }
