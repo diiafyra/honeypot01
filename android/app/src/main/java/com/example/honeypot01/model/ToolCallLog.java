@@ -23,12 +23,13 @@ public class ToolCallLog {
     public ToolCallLog(String potNumber,
                        String spamNumber,
                        Long callTime,
-                       int duration) {
+                       int duration,
+                       String transcript) {
         this.potNumber = potNumber;
         this.spamNumber = spamNumber;
         this.callTime = callTime;
         this.duration = duration;
-        this.transcript = "";
+        this.transcript = transcript;
     }
 
     @PropertyName("pot_number")

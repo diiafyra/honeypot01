@@ -5,8 +5,11 @@ import android.app.role.RoleManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
@@ -16,6 +19,8 @@ import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.example.honeypot01.service.AutoReceiveSpamService;
+
 import io.flutter.embedding.android.FlutterActivity;
 
 public class MainActivity extends FlutterActivity {
@@ -23,26 +28,43 @@ public class MainActivity extends FlutterActivity {
     private static final String TAG = "MainActivity";
 
     // Request codes
-    private static final int REQUEST_DANGEROUS_PERMISSIONS = 100;
-    private static final int REQUEST_CALL_SCREENING_ROLE = 101;
+    private static final int REQUEST_PERMISSIONS = 100;
+    private static final int REQUEST_CALL_SCREENING = 101;
+    private static final int REQUEST_ALL_FILES_ACCESS = 102;
+
+    private Handler handler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        handler = new Handler();
 
-        // Kiểm tra và xin permissions
-        checkAndRequestPermissions();
+        Log.d(TAG, "=== APP STARTED ===");
+        checkPermissions();
     }
 
-    private void checkAndRequestPermissions() {
-        Log.d(TAG, "=== CHECKING ALL PERMISSIONS ===");
-        logPermissionStatus();
+    // ═══════════════════════════════════════════════════════════════════
+    // CHECK PERMISSIONS
+    // ═══════════════════════════════════════════════════════════════════
 
-        requestDangerousPermissions();
+    private void checkPermissions() {
+        logAllPermissions();
+
+        if (!hasDangerousPermissions()) {
+            requestDangerousPermissions();
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !hasAllFilesAccess()) {
+            requestAllFilesAccess();
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !hasCallScreeningRole()) {
+            requestCallScreeningRole();
+        } else {
+            startService();
+        }
     }
 
-    private void logPermissionStatus() {
+    private void logAllPermissions() {
+        Log.d(TAG, "=== PERMISSION STATUS ===");
         Log.d(TAG, (hasPermission(Manifest.permission.READ_PHONE_STATE) ? "✅" : "❌") + " READ_PHONE_STATE");
+        Log.d(TAG, (hasPermission(Manifest.permission.ANSWER_PHONE_CALLS) ? "✅" : "❌") + " ANSWER_PHONE_CALLS");
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             Log.d(TAG, (hasPermission(Manifest.permission.READ_MEDIA_AUDIO) ? "✅" : "❌") + " READ_MEDIA_AUDIO");
@@ -50,50 +72,36 @@ public class MainActivity extends FlutterActivity {
             Log.d(TAG, (hasPermission(Manifest.permission.READ_EXTERNAL_STORAGE) ? "✅" : "❌") + " READ_EXTERNAL_STORAGE");
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Log.d(TAG, (hasPermission(Manifest.permission.ANSWER_PHONE_CALLS) ? "✅" : "❌") + " ANSWER_PHONE_CALLS");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Log.d(TAG, (hasAllFilesAccess() ? "✅" : "❌") + " ALL_FILES_ACCESS");
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            Log.d(TAG, (isCallScreeningApp() ? "✅" : "❌") + " CALL_SCREENING_ROLE");
+            Log.d(TAG, (hasCallScreeningRole() ? "✅" : "❌") + " CALL_SCREENING_ROLE");
         }
 
-        Log.d(TAG, (isAccessibilityServiceEnabled() ? "✅" : "❌") + " ACCESSIBILITY_SERVICE");
-        Log.d(TAG, "================================");
+        Log.d(TAG, "========================");
     }
 
-    private boolean hasPermission(String permission) {
-        return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED;
-    }
+    // ═══════════════════════════════════════════════════════════════════
+    // DANGEROUS PERMISSIONS
+    // ═══════════════════════════════════════════════════════════════════
 
-    @RequiresApi(api = Build.VERSION_CODES.Q)
-    private boolean isCallScreeningApp() {
-        RoleManager roleManager = (RoleManager) getSystemService(Context.ROLE_SERVICE);
-        return roleManager != null && roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING);
-    }
+    private boolean hasDangerousPermissions() {
+        if (!hasPermission(Manifest.permission.READ_PHONE_STATE)) return false;
+        if (!hasPermission(Manifest.permission.ANSWER_PHONE_CALLS)) return false;
 
-    private boolean isAccessibilityServiceEnabled() {
-        String service = getPackageName() + "/.service.AutoReceiveSpamService";
-        try {
-            int accessibilityEnabled = Settings.Secure.getInt(getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED);
-            if (accessibilityEnabled == 1) {
-                String settingValue = Settings.Secure.getString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-                return settingValue != null && settingValue.toLowerCase().contains(service.toLowerCase());
-            }
-        } catch (Settings.SettingNotFoundException e) {
-            Log.e(TAG, "Accessibility setting not found", e);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return hasPermission(Manifest.permission.READ_MEDIA_AUDIO);
+        } else {
+            return hasPermission(Manifest.permission.READ_EXTERNAL_STORAGE);
         }
-        return false;
     }
 
-    /** ==================== REQUEST PERMISSIONS ==================== */
-
-    /**
-     * Xin tất cả dangerous permissions 1 lần duy nhất
-     */
     private void requestDangerousPermissions() {
-        String[] permissions;
+        Log.d(TAG, "📱 Requesting dangerous permissions...");
 
+        String[] permissions;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions = new String[]{
                     Manifest.permission.READ_PHONE_STATE,
@@ -108,66 +116,78 @@ public class MainActivity extends FlutterActivity {
             };
         }
 
-        // Lọc những permission chưa có
-        permissions = filterUngrantedPermissions(permissions);
+        ActivityCompat.requestPermissions(this, permissions, REQUEST_PERMISSIONS);
+    }
 
-        if (permissions.length > 0) {
-            Log.d(TAG, "📱 Requesting dangerous permissions...");
-            ActivityCompat.requestPermissions(this, permissions, REQUEST_DANGEROUS_PERMISSIONS);
-        } else {
-            Log.d(TAG, "✅ All dangerous permissions already granted");
-            requestCallScreeningRole();
+    // ═══════════════════════════════════════════════════════════════════
+    // ALL FILES ACCESS (Android 11+)
+    // ═══════════════════════════════════════════════════════════════════
+
+    @RequiresApi(api = Build.VERSION_CODES.R)
+    private boolean hasAllFilesAccess() {
+        return Environment.isExternalStorageManager();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.R)
+    private void requestAllFilesAccess() {
+        Log.d(TAG, "📁 Requesting All Files Access...");
+
+        Toast.makeText(this,
+                "Grant 'All files access' to read call recordings",
+                Toast.LENGTH_LONG).show();
+
+        try {
+            Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            startActivityForResult(intent, REQUEST_ALL_FILES_ACCESS);
+        } catch (Exception e) {
+            Log.e(TAG, "Cannot open All Files Access settings", e);
+            Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+            startActivityForResult(intent, REQUEST_ALL_FILES_ACCESS);
         }
     }
 
-    private String[] filterUngrantedPermissions(String[] permissions) {
-        return java.util.Arrays.stream(permissions)
-                .filter(p -> !hasPermission(p))
-                .toArray(String[]::new);
+    // ═══════════════════════════════════════════════════════════════════
+    // CALL SCREENING ROLE
+    // ═══════════════════════════════════════════════════════════════════
+
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    private boolean hasCallScreeningRole() {
+        RoleManager roleManager = (RoleManager) getSystemService(Context.ROLE_SERVICE);
+        return roleManager != null && roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING);
     }
 
-    /**
-     * Xin Call Screening Role (special/system-level)
-     */
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     private void requestCallScreeningRole() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (!isCallScreeningApp()) {
-                Log.d(TAG, "🔍 Requesting Call Screening Role...");
-                RoleManager roleManager = (RoleManager) getSystemService(Context.ROLE_SERVICE);
-                if (roleManager != null) {
-                    Intent intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING);
-                    startActivityForResult(intent, REQUEST_CALL_SCREENING_ROLE);
-                } else {
-                    Log.e(TAG, "❌ RoleManager not available");
-                    openAccessibilitySettings();
-                }
-            } else {
-                Log.d(TAG, "✅ Call Screening Role already granted");
-                openAccessibilitySettings();
-            }
-        } else {
-            openAccessibilitySettings();
+        Log.d(TAG, "🔍 Requesting Call Screening Role...");
+
+        RoleManager roleManager = (RoleManager) getSystemService(Context.ROLE_SERVICE);
+        if (roleManager != null) {
+            Intent intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING);
+            startActivityForResult(intent, REQUEST_CALL_SCREENING);
         }
     }
 
-    private void openAccessibilitySettings() {
-        if (!isAccessibilityServiceEnabled()) {
-            Log.d(TAG, "♿ Opening Accessibility Settings...");
-            try {
-                Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-                Toast.makeText(this, "Please enable 'Auto Receive Spam Service'", Toast.LENGTH_LONG).show();
-            } catch (Exception e) {
-                Log.e(TAG, "Cannot open Accessibility Settings", e);
-            }
+    // ═══════════════════════════════════════════════════════════════════
+    // START SERVICE
+    // ═══════════════════════════════════════════════════════════════════
+
+    private void startService() {
+        Log.d(TAG, "✅ ALL PERMISSIONS OK - Starting service...");
+
+        Intent intent = new Intent(this, AutoReceiveSpamService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent);
         } else {
-            Log.d(TAG, "✅ Accessibility Service already enabled");
-            Toast.makeText(this, "✅ All permissions granted!", Toast.LENGTH_SHORT).show();
+            startService(intent);
         }
+
+        Toast.makeText(this, "✅ Service started", Toast.LENGTH_SHORT).show();
     }
 
-    /** ==================== CALLBACKS ==================== */
+    // ═══════════════════════════════════════════════════════════════════
+    // CALLBACKS
+    // ═══════════════════════════════════════════════════════════════════
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
@@ -175,25 +195,21 @@ public class MainActivity extends FlutterActivity {
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        if (requestCode == REQUEST_DANGEROUS_PERMISSIONS) {
+        if (requestCode == REQUEST_PERMISSIONS) {
             boolean allGranted = true;
-            for (int result : grantResults) {
-                if (result != PackageManager.PERMISSION_GRANTED) {
-                    allGranted = false;
-                    break;
-                }
+            for (int i = 0; i < permissions.length; i++) {
+                boolean granted = grantResults[i] == PackageManager.PERMISSION_GRANTED;
+                Log.d(TAG, (granted ? "✅" : "❌") + " " + permissions[i]);
+                if (!granted) allGranted = false;
             }
 
             if (allGranted) {
                 Log.d(TAG, "✅ All dangerous permissions granted");
-                Toast.makeText(this, "✅ Permissions granted", Toast.LENGTH_SHORT).show();
+                checkPermissions();
             } else {
-                Log.e(TAG, "❌ Some dangerous permissions denied");
-                Toast.makeText(this, "❌ Some permissions denied - app may not work properly", Toast.LENGTH_LONG).show();
+                Log.e(TAG, "❌ Some permissions denied");
+                Toast.makeText(this, "❌ App needs all permissions to work", Toast.LENGTH_LONG).show();
             }
-
-            // Dù granted hay không, tiếp tục flow special permissions
-            requestCallScreeningRole();
         }
     }
 
@@ -201,23 +217,40 @@ public class MainActivity extends FlutterActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == REQUEST_CALL_SCREENING_ROLE) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && isCallScreeningApp()) {
-                Log.d(TAG, "✅ Call Screening Role GRANTED");
-                Toast.makeText(this, "✅ Call Screening Role granted", Toast.LENGTH_SHORT).show();
-            } else {
-                Log.e(TAG, "❌ Call Screening Role DENIED");
-                Toast.makeText(this, "❌ Call Screening Role denied", Toast.LENGTH_LONG).show();
-            }
+        if (requestCode == REQUEST_ALL_FILES_ACCESS) {
+            handler.postDelayed(() -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && hasAllFilesAccess()) {
+                    Log.d(TAG, "✅ All Files Access granted");
+                } else {
+                    Log.w(TAG, "⚠️ All Files Access not granted");
+                }
+                checkPermissions();
+            }, 500);
 
-            // Mở Accessibility Settings cuối cùng
-            openAccessibilitySettings();
+        } else if (requestCode == REQUEST_CALL_SCREENING) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (hasCallScreeningRole()) {
+                    Log.d(TAG, "✅ Call Screening Role granted");
+                } else {
+                    Log.e(TAG, "❌ Call Screening Role denied");
+                }
+            }
+            checkPermissions();
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        logPermissionStatus();
+        handler.postDelayed(this::logAllPermissions, 500);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ═══════════════════════════════════════════════════════════════════
+
+    private boolean hasPermission(String permission) {
+        return ContextCompat.checkSelfPermission(this, permission)
+                == PackageManager.PERMISSION_GRANTED;
     }
 }

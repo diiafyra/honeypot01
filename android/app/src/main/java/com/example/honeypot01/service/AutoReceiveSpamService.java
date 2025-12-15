@@ -3,10 +3,16 @@ package com.example.honeypot01.service;
 import android.Manifest;
 import android.accessibilityservice.AccessibilityService;
 import android.annotation.SuppressLint;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.Service;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 import android.telecom.TelecomManager;
 import android.telephony.PhoneStateListener;
@@ -14,67 +20,73 @@ import android.telephony.TelephonyCallback;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
-import android.view.accessibility.AccessibilityNodeInfo;
 
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 
+import com.example.honeypot01.R;
 import com.example.honeypot01.model.CallDetailsHolder;
 import com.example.honeypot01.repository.CallDataManager;
 
-import java.util.List;
 import java.util.concurrent.Executor;
 
 @SuppressLint("AccessibilityPolicy")
-public class AutoReceiveSpamService extends AccessibilityService {
+public class AutoReceiveSpamService extends Service {
 
     private static final String TAG = "AutoReceiveSpam";
 
     private Handler handler;
     private TelephonyManager telephonyManager;
+    private TelecomManager telecomManager;
     private PhoneStateListener phoneStateListener;
     private CustomTelephonyCallback telephonyCallback;
     private CallDataManager callDataManager;
 
-    // Call details sẽ được set từ CallScreeningService
+    // Call details từ CallScreeningService
     private static CallDetailsHolder pendingCallDetails = null;
 
+    // Call tracking
     private long callStartTime = 0;
     private boolean isCallActive = false;
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
         handler = new Handler(Looper.getMainLooper());
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        telecomManager = (TelecomManager) getSystemService(Context.TELECOM_SERVICE);
         callDataManager = new CallDataManager(this);
 
         registerPhoneStateListener();
+        startAsForeground();
 
-        Log.d(TAG, "Service Created");
+        Log.d(TAG, "✅ Service Created");
     }
 
-    @Override
-    protected void onServiceConnected() {
-        super.onServiceConnected();
-        Log.d(TAG, "Service Connected - Auto-answer ACTIVE");
-    }
 
     /**
-     * Method public để CallScreeningService có thể set call details
+     * Set call details từ CallScreeningService
      */
     public static void setPendingCallDetails(CallDetailsHolder callDetails) {
         pendingCallDetails = callDetails;
-        Log.d(TAG, "Pending call details set: " + callDetails.getPhoneNumber() +
-                " | Type: " + callDetails.getHandlePresentation()+
-                " | Verification: " + callDetails.getVerificationStatus());
+        Log.d(TAG, "📞 Pending call: " + callDetails.getPhoneNumber());
     }
 
+    // ═══════════════════════════════════════════════════════════════════
+    // PHONE STATE LISTENER
+    // ═══════════════════════════════════════════════════════════════════
 
     private void registerPhoneStateListener() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
                 != PackageManager.PERMISSION_GRANTED) {
-            Log.e(TAG, "Missing READ_PHONE_STATE permission");
+            Log.e(TAG, "❌ Missing READ_PHONE_STATE permission");
             return;
         }
 
@@ -90,7 +102,7 @@ public class AutoReceiveSpamService extends AccessibilityService {
         telephonyCallback = new CustomTelephonyCallback();
         Executor executor = command -> handler.post(command);
         telephonyManager.registerTelephonyCallback(executor, telephonyCallback);
-        Log.d(TAG, "TelephonyCallback registered (API 31+)");
+        Log.d(TAG, "📱 TelephonyCallback registered (API 31+)");
     }
 
     @SuppressLint("MissingPermission")
@@ -98,7 +110,7 @@ public class AutoReceiveSpamService extends AccessibilityService {
         phoneStateListener = new PhoneStateListener() {
             @Override
             public void onCallStateChanged(int state, String phoneNumber) {
-                // Android < 12: phoneNumber có sẵn, tạo CallDetailsHolder
+                // Android < 12: tạo CallDetailsHolder nếu chưa có
                 if (phoneNumber != null && !phoneNumber.isEmpty() && pendingCallDetails == null) {
                     pendingCallDetails = new CallDetailsHolder();
                     pendingCallDetails.setPhoneNumber(phoneNumber);
@@ -107,45 +119,7 @@ public class AutoReceiveSpamService extends AccessibilityService {
             }
         };
         telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
-        Log.d(TAG, "PhoneStateListener registered (Legacy)");
-    }
-
-    private void handleCallStateChange(int state) {
-        switch (state) {
-            case TelephonyManager.CALL_STATE_RINGING:
-                break;
-
-            case TelephonyManager.CALL_STATE_OFFHOOK:
-                if (!isCallActive && pendingCallDetails != null) {
-                    isCallActive = true;
-                    callStartTime = System.currentTimeMillis();
-                    Log.d(TAG, "✅ CALL STARTED - Number: " +
-                            pendingCallDetails.getPhoneNumber());
-
-                    callDataManager.handleCallStarted(pendingCallDetails, callStartTime);
-                }
-                break;
-
-            case TelephonyManager.CALL_STATE_IDLE:
-                if (isCallActive && pendingCallDetails != null) {
-                    isCallActive = false;
-                    long callEndTime = System.currentTimeMillis();
-                    long duration = callEndTime - callStartTime;
-
-                    Log.d(TAG, "❌ CALL ENDED - Duration: " + (duration / 1000) + "s");
-
-                    callDataManager.handleCallEnded(
-                            pendingCallDetails,
-                            callStartTime,
-                            callEndTime,
-                            duration
-                    );
-
-                    pendingCallDetails = null;
-                    callStartTime = 0;
-                }
-                break;
-        }
+        Log.d(TAG, "📱 PhoneStateListener registered (Legacy)");
     }
 
     @RequiresApi(api = Build.VERSION_CODES.S)
@@ -156,60 +130,98 @@ public class AutoReceiveSpamService extends AccessibilityService {
         }
     }
 
-    @Override
-    public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event == null) return;
+    // ═══════════════════════════════════════════════════════════════════
+    // CALL STATE HANDLING
+    // ═══════════════════════════════════════════════════════════════════
 
-        String eventString = event.toString().toLowerCase();
+    private void handleCallStateChange(int state) {
+        switch (state) {
+            case TelephonyManager.CALL_STATE_RINGING:
+                handleRingingState();
+                break;
 
-        if (eventString.contains("incoming call") ||
-                eventString.contains("answer") ||
-                eventString.contains("decline")) {
-            Log.d(TAG, "INCOMING CALL DETECTED via Accessibility!");
-            handleIncomingCall();
+            case TelephonyManager.CALL_STATE_OFFHOOK:
+                handleOffhookState();
+                break;
+
+            case TelephonyManager.CALL_STATE_IDLE:
+                handleIdleState();
+                break;
         }
     }
 
-    private void handleIncomingCall() {
-        Log.d(TAG, "Xử lý cuộc gọi đến...");
+    /**
+     * RINGING: Cuộc gọi đến → Tự động answer
+     */
+    private void handleRingingState() {
+        Log.d(TAG, "📞 RINGING - Auto-answering...");
         answerCall();
     }
 
-    private void answerCall() {
-        boolean success = answerWithTelecomManager();
+    /**
+     * OFFHOOK: Cuộc gọi đang active → Track call start
+     */
+    private void handleOffhookState() {
+        if (!isCallActive && pendingCallDetails != null) {
+            isCallActive = true;
+            callStartTime = System.currentTimeMillis();
 
-        if (success) {
-            Log.d(TAG, "Call answered successfully!");
-        } else {
-            Log.e(TAG, "Failed to answer call");
+            Log.d(TAG, "✅ CALL STARTED: " + pendingCallDetails.getPhoneNumber());
+            callDataManager.handleCallStarted(pendingCallDetails, callStartTime);
         }
     }
 
-    private boolean answerWithTelecomManager() {
+    /**
+     * IDLE: Cuộc gọi kết thúc → Lưu log và transcribe
+     */
+    private void handleIdleState() {
+        if (isCallActive && pendingCallDetails != null) {
+            isCallActive = false;
+            long callEndTime = System.currentTimeMillis();
+            long duration = callEndTime - callStartTime;
+
+            Log.d(TAG, "❌ CALL ENDED: " + pendingCallDetails.getPhoneNumber() +
+                    " (duration: " + (duration / 1000) + "s)");
+
+            callDataManager.handleCallEnded(
+                    pendingCallDetails,
+                    callStartTime,
+                    callEndTime,
+                    duration
+            );
+
+            // Reset
+            pendingCallDetails = null;
+            callStartTime = 0;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // AUTO ANSWER
+    // ═══════════════════════════════════════════════════════════════════
+
+    private void answerCall() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.e(TAG, "❌ Missing ANSWER_PHONE_CALLS permission");
+            return;
+        }
+
         try {
-            TelecomManager tm = (TelecomManager) getSystemService(Context.TELECOM_SERVICE);
-            if (tm != null) {
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
-                        != PackageManager.PERMISSION_GRANTED) {
-                    Log.e(TAG, "Missing ANSWER_PHONE_CALLS permission");
-                    return false;
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    tm.acceptRingingCall();
-                }
-                Log.d(TAG, "Answered via TelecomManager");
-                return true;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && telecomManager != null) {
+                telecomManager.acceptRingingCall();
+                Log.d(TAG, "✅ Call answered via TelecomManager");
+            } else {
+                Log.e(TAG, "❌ Cannot answer: API < 26 or TelecomManager null");
             }
         } catch (Exception e) {
-            Log.e(TAG, "TelecomManager failed: " + e.getMessage());
+            Log.e(TAG, "❌ Failed to answer call", e);
         }
-        return false;
     }
 
-    @Override
-    public void onInterrupt() {
-        Log.d(TAG, "Service Interrupted");
-    }
+    // ═══════════════════════════════════════════════════════════════════
+    // ACCESSIBILITY (BỎ TRỐNG)
+    // ═══════════════════════════════════════════════════════════════════
 
     @Override
     public void onDestroy() {
@@ -225,6 +237,35 @@ public class AutoReceiveSpamService extends AccessibilityService {
             handler.removeCallbacksAndMessages(null);
         }
 
-        Log.d(TAG, "Service Destroyed");
+        Log.d(TAG, "🛑 Service Destroyed");
     }
+    private void startAsForeground() {
+        String channelId = "honeypot_call_service";
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    channelId,
+                    "Call Monitoring Service",
+                    NotificationManager.IMPORTANCE_LOW
+            );
+
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
+        }
+
+        Notification notification = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notification = new Notification.Builder(this, channelId)
+                    .setContentTitle("Honeypot đang hoạt động")
+                    .setContentText("Đang theo dõi cuộc gọi đến")
+                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setOngoing(true)
+                    .build();
+        }
+
+        startForeground(1, notification); // 👈 DÒNG QUYẾT ĐỊNH SỐNG CÒN
+    }
+
 }
