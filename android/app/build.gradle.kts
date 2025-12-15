@@ -8,10 +8,29 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+import java.util.Properties
+
+fun String.escapeForJavaStringLiteral(): String =
+    replace("\\", "\\\\").replace("\"", "\\\"")
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+val picovoiceAccessKey = (localProperties.getProperty("picovoice.accessKey") ?: "").escapeForJavaStringLiteral()
+val leopardModelAsset = (localProperties.getProperty("picovoice.leopardModelAsset") ?: "leopard_params.pv").escapeForJavaStringLiteral()
+
 android {
     namespace = "com.example.honeypot01"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+
+    buildFeatures {
+        buildConfig = true
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -31,6 +50,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        buildConfigField("String", "PICOVOICE_ACCESS_KEY", "\"$picovoiceAccessKey\"")
+        buildConfigField("String", "LEOPARD_MODEL_ASSET", "\"$leopardModelAsset\"")
     }
 
     buildTypes {
@@ -43,8 +65,7 @@ android {
 }
 dependencies {
     implementation("com.google.firebase:firebase-firestore:26.0.2")
-    implementation("com.alphacephei:vosk-android:0.3.47")
-    implementation("com.squareup.okhttp3:okhttp:4.11.0")
+    implementation("ai.picovoice:leopard-android:2.0.2")
 }
 
 flutter {

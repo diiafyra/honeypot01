@@ -5,7 +5,7 @@ import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.example.honeypot01.model.*;
-import com.example.honeypot01.stt.AssemblyAI;
+import com.example.honeypot01.stt.LeopardStt;
 import com.google.firebase.firestore.*;
 
 import java.io.File;
@@ -20,7 +20,7 @@ public class CallDataManager {
     private static final String KEY_POT_NUMBER = "pot_number";
 
     private static final String AUDIO_DIR =
-            "/storage/emulated/0/MIUI/sound_recorder/call_rec";
+            "/storage/emulated/0/Recordings";
 
     private final Context appContext;
     private final FirebaseFirestore db;
@@ -63,7 +63,7 @@ public class CallDataManager {
                         + " | size=" + audioFile.length()
                         + " | lastModified=" + audioFile.lastModified());
 
-                String transcript = AssemblyAI.transcribe(audioFile);
+                String transcript = LeopardStt.transcribe(appContext, audioFile);
                 Log.d(TAG, "📝 Transcript: " + transcript);
 
                 saveToolCallLog(callDetails, startTime, duration, transcript);
@@ -130,13 +130,21 @@ public class CallDataManager {
             return null;
         }
 
+        File[] all = dir.listFiles();
+        Log.d(TAG, "Scanning audio directory: " + dir.getAbsolutePath() + " (files=" + (all == null ? 0 : all.length) + ")");
+
         File[] files = dir.listFiles((d, name) -> {
             String n = name.toLowerCase();
-            return n.endsWith(".mp3");
+            return n.endsWith(".mp3")
+                    || n.endsWith(".m4a")
+                    || n.endsWith(".aac")
+                    || n.endsWith(".wav")
+                    || n.endsWith(".3gp")
+                    || n.endsWith(".mp4");
         });
 
         if (files == null || files.length == 0) {
-            Log.w(TAG, "No audio files found");
+            Log.w(TAG, "No audio files found in " + AUDIO_DIR + " (supported: mp3/m4a/aac/wav/3gp/mp4)");
             return null;
         }
 
