@@ -34,17 +34,16 @@ public class CallDataManager {
 
     // ================= CALL START =================
     public void handleCallStarted(CallDetailsHolder callDetails, long startTime) {
-        Log.d(TAG, "📞 Call Started: " + callDetails.getPhoneNumber());
+        Log.d(TAG, "Call Started: " + callDetails.getPhoneNumber());
         upsertSpamNumber(callDetails);
     }
 
     // ================= CALL END =================
     public void handleCallEnded(CallDetailsHolder callDetails,
                                 long startTime,
-                                long endTime,
                                 long duration) {
 
-        Log.d(TAG, "❌ Call Ended - duration: " + duration / 1000 + "s");
+        Log.d(TAG, "Call Ended - duration: " + duration / 1000 + "s");
 
         new Thread(() -> {
             try {
@@ -54,12 +53,12 @@ public class CallDataManager {
                 File audioFile = getLatestAudioFile();
 
                 if (audioFile == null) {
-                    Log.w(TAG, "⚠️ No audio file found");
-                    saveToolCallLog(callDetails, duration, null);
+                    Log.w(TAG, "No audio file found");
+                    saveToolCallLog(callDetails, startTime, duration, null);
                     return;
                 }
 
-                Log.d(TAG, "✅ Using audio file: "
+                Log.d(TAG, "Using audio file: "
                         + audioFile.getName()
                         + " | size=" + audioFile.length()
                         + " | lastModified=" + audioFile.lastModified());
@@ -67,11 +66,11 @@ public class CallDataManager {
                 String transcript = AssemblyAI.transcribe(audioFile);
                 Log.d(TAG, "📝 Transcript: " + transcript);
 
-                saveToolCallLog(callDetails, duration, transcript);
+                saveToolCallLog(callDetails, startTime, duration, transcript);
 
             } catch (Exception e) {
-                Log.e(TAG, "❌ Error processing call audio", e);
-                saveToolCallLog(callDetails, duration, null);
+                Log.e(TAG, "Error processing call audio", e);
+                saveToolCallLog(callDetails, startTime, duration, null);
             }
         }).start();
     }
@@ -102,6 +101,7 @@ public class CallDataManager {
 
     // ================= TOOL CALL LOG =================
     private void saveToolCallLog(CallDetailsHolder callDetails,
+                                 long startTime,
                                  long duration,
                                  String transcript) {
 
@@ -110,19 +110,18 @@ public class CallDataManager {
         ToolCallLog log = new ToolCallLog(
                 potNumber,
                 callDetails.getPhoneNumber(),
-                System.currentTimeMillis(),
+                startTime,
                 (int) (duration / 1000),
                 transcript
         );
 
         db.collection("tool_call_logs").add(log)
                 .addOnSuccessListener(doc ->
-                        Log.d(TAG, "✅ Call log saved: " + doc.getId()))
+                        Log.d(TAG, "Call log saved: " + doc.getId()))
                 .addOnFailureListener(e ->
-                        Log.e(TAG, "❌ Failed to save call log", e));
+                        Log.e(TAG, "Failed to save call log", e));
     }
 
-    // ================= GET LATEST AUDIO FILE =================
     private File getLatestAudioFile() {
         File dir = new File(AUDIO_DIR);
 
@@ -133,12 +132,7 @@ public class CallDataManager {
 
         File[] files = dir.listFiles((d, name) -> {
             String n = name.toLowerCase();
-            return n.endsWith(".mp3")
-                    || n.endsWith(".wav")
-                    || n.endsWith(".m4a")
-                    || n.endsWith(".aac")
-                    || n.endsWith(".3gp")
-                    || n.endsWith(".mp4");
+            return n.endsWith(".mp3");
         });
 
         if (files == null || files.length == 0) {

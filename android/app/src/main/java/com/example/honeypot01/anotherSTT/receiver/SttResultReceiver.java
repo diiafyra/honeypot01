@@ -1,11 +1,11 @@
-package com.example.honeypot01.receiver;
+package com.example.honeypot01.anotherSTT.receiver;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
-import com.example.honeypot01.service.SpeechToTextService;
+import com.example.honeypot01.anotherSTT.SpeechToTextService;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class SttResultReceiver extends BroadcastReceiver {

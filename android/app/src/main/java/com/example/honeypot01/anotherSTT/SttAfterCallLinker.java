@@ -1,4 +1,4 @@
-package com.example.honeypot01.stt;
+package com.example.honeypot01.anotherSTT;
 
 import android.content.ContentUris;
 import android.content.Context;
@@ -9,8 +9,6 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
-
-import com.example.honeypot01.service.SpeechToTextService;
 
 import java.io.File;
 

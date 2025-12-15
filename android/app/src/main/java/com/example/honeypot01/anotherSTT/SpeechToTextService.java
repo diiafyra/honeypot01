@@ -1,4 +1,4 @@
-package com.example.honeypot01.service;
+package com.example.honeypot01.anotherSTT;
 
 import android.app.IntentService;
 import android.content.Intent;
@@ -13,7 +13,7 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 
-import com.example.honeypot01.receiver.SttResultReceiver;
+import com.example.honeypot01.anotherSTT.receiver.SttResultReceiver;
 
 import org.json.JSONObject;
 import org.vosk.Model;

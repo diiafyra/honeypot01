@@ -19,7 +19,6 @@ public class MyCallScreeningService extends CallScreeningService {
     public void onScreenCall(@NonNull Call.Details callDetails) {
         String phoneNumber = null;
 
-        // === TRƯỜNG 1: Phone Number - Quan trọng nhất ===
         if (callDetails.getHandle() != null) {
             phoneNumber = callDetails.getHandle().getSchemeSpecificPart();
         }
@@ -33,7 +32,6 @@ public class MyCallScreeningService extends CallScreeningService {
         CallDetailsHolder holder = new CallDetailsHolder();
         holder.setPhoneNumber(phoneNumber);
 
-        // === TRƯỜNG 2: Caller Number Verification Status - Phát hiện giả mạo ===
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             int verificationStatus = callDetails.getCallerNumberVerificationStatus();
             switch (verificationStatus) {
@@ -42,7 +40,7 @@ public class MyCallScreeningService extends CallScreeningService {
                     break;
                 case Connection.VERIFICATION_STATUS_FAILED:
                     holder.setVerificationStatus("FAILED");
-                    Log.w(TAG, "🚨 SPAM - Verification Failed: " + phoneNumber);
+                    Log.w(TAG, "SPAM - Verification Failed: " + phoneNumber);
                     break;
                 case Connection.VERIFICATION_STATUS_NOT_VERIFIED:
                 default:
@@ -52,7 +50,6 @@ public class MyCallScreeningService extends CallScreeningService {
             holder.setVerificationStatus("NOT_AVAILABLE");
         }
 
-        // === TRƯỜNG 3: Handle Presentation - Phát hiện số ẩn ===
         int presentation = callDetails.getHandlePresentation();
         String presentationStr;
         switch (presentation) {
@@ -75,7 +72,6 @@ public class MyCallScreeningService extends CallScreeningService {
         }
         holder.setHandlePresentation(presentationStr);
 
-        // === TRƯỜNG 4: Caller Display Name - Tên carrier cung cấp ===
         String callerDisplayName = callDetails.getCallerDisplayName();
         if (callerDisplayName != null && !callerDisplayName.isEmpty()) {
             holder.setCallerDisplayName(callerDisplayName);
@@ -94,16 +90,14 @@ public class MyCallScreeningService extends CallScreeningService {
         }
 
         // Log tổng hợp
-        Log.d(TAG, "📋 Call Details Summary:");
+        Log.d(TAG, "Call Details Summary:");
         Log.d(TAG, "   1. Number: " + phoneNumber);
         Log.d(TAG, "   2. Verification: " + holder.getVerificationStatus());
         Log.d(TAG, "   3. Presentation: " + holder.getHandlePresentation());
         Log.d(TAG, "   4. Display Name: " + holder.getCallerDisplayName());
 
-        // Truyền sang AutoReceiveSpamService
         AutoReceiveSpamService.setPendingCallDetails(holder);
 
-        // Cho phép cuộc gọi đi qua (không chặn ở đây)
         respondToCall(callDetails, buildAllowResponse());
     }
 

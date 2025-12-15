@@ -67,7 +67,7 @@ public class AutoReceiveSpamService extends Service {
         registerPhoneStateListener();
         startAsForeground();
 
-        Log.d(TAG, "✅ Service Created");
+        Log.d(TAG, "Service Created");
     }
 
 
@@ -76,7 +76,7 @@ public class AutoReceiveSpamService extends Service {
      */
     public static void setPendingCallDetails(CallDetailsHolder callDetails) {
         pendingCallDetails = callDetails;
-        Log.d(TAG, "📞 Pending call: " + callDetails.getPhoneNumber());
+        Log.d(TAG, "Pending call: " + callDetails.getPhoneNumber());
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -86,7 +86,7 @@ public class AutoReceiveSpamService extends Service {
     private void registerPhoneStateListener() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
                 != PackageManager.PERMISSION_GRANTED) {
-            Log.e(TAG, "❌ Missing READ_PHONE_STATE permission");
+            Log.e(TAG, "Missing READ_PHONE_STATE permission");
             return;
         }
 
@@ -102,7 +102,7 @@ public class AutoReceiveSpamService extends Service {
         telephonyCallback = new CustomTelephonyCallback();
         Executor executor = command -> handler.post(command);
         telephonyManager.registerTelephonyCallback(executor, telephonyCallback);
-        Log.d(TAG, "📱 TelephonyCallback registered (API 31+)");
+        Log.d(TAG, "TelephonyCallback registered (API 31+)");
     }
 
     @SuppressLint("MissingPermission")
@@ -119,7 +119,7 @@ public class AutoReceiveSpamService extends Service {
             }
         };
         telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
-        Log.d(TAG, "📱 PhoneStateListener registered (Legacy)");
+        Log.d(TAG, "PhoneStateListener registered (Legacy)");
     }
 
     @RequiresApi(api = Build.VERSION_CODES.S)
@@ -154,7 +154,7 @@ public class AutoReceiveSpamService extends Service {
      * RINGING: Cuộc gọi đến → Tự động answer
      */
     private void handleRingingState() {
-        Log.d(TAG, "📞 RINGING - Auto-answering...");
+        Log.d(TAG, "RINGING - Auto-answering...");
         answerCall();
     }
 
@@ -166,7 +166,7 @@ public class AutoReceiveSpamService extends Service {
             isCallActive = true;
             callStartTime = System.currentTimeMillis();
 
-            Log.d(TAG, "✅ CALL STARTED: " + pendingCallDetails.getPhoneNumber());
+            Log.d(TAG, "CALL STARTED: " + pendingCallDetails.getPhoneNumber());
             callDataManager.handleCallStarted(pendingCallDetails, callStartTime);
         }
     }
@@ -180,13 +180,12 @@ public class AutoReceiveSpamService extends Service {
             long callEndTime = System.currentTimeMillis();
             long duration = callEndTime - callStartTime;
 
-            Log.d(TAG, "❌ CALL ENDED: " + pendingCallDetails.getPhoneNumber() +
+            Log.d(TAG, "CALL ENDED: " + pendingCallDetails.getPhoneNumber() +
                     " (duration: " + (duration / 1000) + "s)");
 
             callDataManager.handleCallEnded(
                     pendingCallDetails,
                     callStartTime,
-                    callEndTime,
                     duration
             );
 
@@ -203,19 +202,19 @@ public class AutoReceiveSpamService extends Service {
     private void answerCall() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
                 != PackageManager.PERMISSION_GRANTED) {
-            Log.e(TAG, "❌ Missing ANSWER_PHONE_CALLS permission");
+            Log.e(TAG, "Missing ANSWER_PHONE_CALLS permission");
             return;
         }
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && telecomManager != null) {
                 telecomManager.acceptRingingCall();
-                Log.d(TAG, "✅ Call answered via TelecomManager");
+                Log.d(TAG, "Call answered via TelecomManager");
             } else {
-                Log.e(TAG, "❌ Cannot answer: API < 26 or TelecomManager null");
+                Log.e(TAG, "Cannot answer: API < 26 or TelecomManager null");
             }
         } catch (Exception e) {
-            Log.e(TAG, "❌ Failed to answer call", e);
+            Log.e(TAG, "Failed to answer call", e);
         }
     }
 
@@ -265,7 +264,7 @@ public class AutoReceiveSpamService extends Service {
                     .build();
         }
 
-        startForeground(1, notification); // 👈 DÒNG QUYẾT ĐỊNH SỐNG CÒN
+        startForeground(1, notification);
     }
 
 }
