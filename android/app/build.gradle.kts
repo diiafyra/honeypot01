@@ -20,8 +20,6 @@ val localProperties = Properties().apply {
     }
 }
 
-val picovoiceAccessKey = (localProperties.getProperty("picovoice.accessKey") ?: "").escapeForJavaStringLiteral()
-val leopardModelAsset = (localProperties.getProperty("picovoice.leopardModelAsset") ?: "leopard_params.pv").escapeForJavaStringLiteral()
 
 android {
     namespace = "com.example.honeypot01"
@@ -51,8 +49,7 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        buildConfigField("String", "PICOVOICE_ACCESS_KEY", "\"$picovoiceAccessKey\"")
-        buildConfigField("String", "LEOPARD_MODEL_ASSET", "\"$leopardModelAsset\"")
+        
     }
 
     buildTypes {
@@ -63,9 +60,12 @@ android {
         }
     }
 }
+
 dependencies {
     implementation("com.google.firebase:firebase-firestore:26.0.2")
-    implementation("ai.picovoice:leopard-android:2.0.2")
+    implementation(files("libs/sherpa-onnx-1.12.19.aar"))
+    // FFmpeg-kit is optional - only needed if audio format conversion is required
+    // implementation("com.arthenica:ffmpeg-kit-full:6.0-2.LTS")
 }
 
 flutter {

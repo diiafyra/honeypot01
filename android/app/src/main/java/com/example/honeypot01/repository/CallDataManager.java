@@ -5,7 +5,7 @@ import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.example.honeypot01.model.*;
-import com.example.honeypot01.stt.LeopardStt;
+import com.example.honeypot01.stt.SherpaOnnxStt;
 import com.google.firebase.firestore.*;
 
 import java.io.File;
@@ -63,8 +63,7 @@ public class CallDataManager {
                         + " | size=" + audioFile.length()
                         + " | lastModified=" + audioFile.lastModified());
 
-                String transcript = LeopardStt.transcribe(appContext, audioFile);
-                Log.d(TAG, "📝 Transcript: " + transcript);
+String transcript = SherpaOnnxStt.transcribe(appContext, audioFile);
 
                 saveToolCallLog(callDetails, startTime, duration, transcript);
 
