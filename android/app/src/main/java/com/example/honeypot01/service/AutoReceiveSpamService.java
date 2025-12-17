@@ -167,7 +167,7 @@ public class AutoReceiveSpamService extends Service {
             callStartTime = System.currentTimeMillis();
 
             Log.d(TAG, "CALL STARTED: " + pendingCallDetails.getPhoneNumber());
-            callDataManager.handleCallStarted(pendingCallDetails, callStartTime);
+            callDataManager.onCallStarted(pendingCallDetails);
         }
     }
 
@@ -183,7 +183,7 @@ public class AutoReceiveSpamService extends Service {
             Log.d(TAG, "CALL ENDED: " + pendingCallDetails.getPhoneNumber() +
                     " (duration: " + (duration / 1000) + "s)");
 
-            callDataManager.handleCallEnded(
+            callDataManager.onCallEnded(
                     pendingCallDetails,
                     callStartTime,
                     duration

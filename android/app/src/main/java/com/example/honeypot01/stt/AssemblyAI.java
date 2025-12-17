@@ -27,9 +27,11 @@ public class AssemblyAI {
 
             JSONObject response = postJson(BASE_URL + "/transcript", request);
             String transcriptId = response.getString("id");
+            String result = pollResult(transcriptId);
+            Log.d(TAG, result);
 
             // Poll for result
-            return pollResult(transcriptId);
+            return result;
 
         } catch (Exception e) {
             Log.e(TAG, "Transcription failed", e);
