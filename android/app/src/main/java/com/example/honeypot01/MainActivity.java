@@ -106,7 +106,8 @@ public class MainActivity extends FlutterActivity {
             permissions = new String[]{
                     Manifest.permission.READ_PHONE_STATE,
                     Manifest.permission.ANSWER_PHONE_CALLS,
-                    Manifest.permission.READ_MEDIA_AUDIO
+                    Manifest.permission.READ_MEDIA_AUDIO,
+                    Manifest.permission.READ_CALL_LOG
             };
         } else {
             permissions = new String[]{
