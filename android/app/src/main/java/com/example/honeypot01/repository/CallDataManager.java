@@ -12,6 +12,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.*;
 
 public class CallDataManager {
 
@@ -63,14 +64,45 @@ public class CallDataManager {
                         + " | size=" + audioFile.length()
                         + " | lastModified=" + audioFile.lastModified());
 
-String transcript = SherpaOnnxStt.transcribe(appContext, audioFile);
+                Log.d(TAG, "[STEP 1] Starting STT transcription...");
+                long sttStart = System.currentTimeMillis();
+                
+                String transcript = null;
+                try {
+                    // TIMEOUT WRAPPER: 60 giây tối đa cho STT
+                    ExecutorService executor = Executors.newSingleThreadExecutor();
+                    final File finalAudioFile = audioFile;
+                    Future<String> future = executor.submit(() -> 
+                        SherpaOnnxStt.transcribe(appContext, finalAudioFile)
+                    );
+                    
+                    try {
+                        transcript = future.get(60, TimeUnit.SECONDS);
+                        Log.d(TAG, "[STEP 2] STT completed in " + (System.currentTimeMillis() - sttStart) + "ms");
+                        Log.d(TAG, "[STEP 2] Result: " + (transcript == null ? "NULL" : transcript.length() + " chars"));
+                    } catch (TimeoutException te) {
+                        Log.e(TAG, "[STEP 2] STT TIMEOUT after 60s! Cancelling...");
+                        future.cancel(true);
+                        transcript = "Error: STT timeout (60s)";
+                    } finally {
+                        executor.shutdownNow();
+                    }
+                } catch (Throwable t) {
+                    Log.e(TAG, "[STEP 2] STT CRASHED!", t);
+                }
 
+                Log.d(TAG, "[STEP 3] Saving to Firestore...");
                 saveToolCallLog(callDetails, startTime, duration, transcript);
 
-            } catch (Exception e) {
-                Log.e(TAG, "Error processing call audio", e);
-                saveToolCallLog(callDetails, startTime, duration, null);
+            } catch (Throwable t) {
+                Log.e(TAG, "[FATAL] Error processing call audio", t);
+                try {
+                    saveToolCallLog(callDetails, startTime, duration, null);
+                } catch (Throwable t2) {
+                    Log.e(TAG, "[FATAL] Failed to save error log", t2);
+                }
             }
+            Log.d(TAG, "[END] Background thread finished");
         }).start();
     }
 

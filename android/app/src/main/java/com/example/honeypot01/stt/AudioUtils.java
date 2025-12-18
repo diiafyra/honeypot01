@@ -20,15 +20,16 @@ public class AudioUtils {
     private static final int TARGET_SAMPLE_RATE = 16000;
 
     public static float[] decodeAndResample(File inputFile) {
-        // Try to decode using MediaCodec (supports mp3, aac, m4a, wav, etc.)
-        try {
-            return decodeWithMediaCodec(inputFile);
-        } catch (Exception e) {
-            Log.e(TAG, "MediaCodec decoding failed, trying raw PCM fallback", e);
-            // Fallback to raw PCM reading if MediaCodec fails (e.g. file is actually raw PCM)
-            return readRawPcm(inputFile);
-        }
+    Log.d(TAG, "🎧 Bắt đầu Decode file: " + inputFile.getName()); // <--- THÊM
+    try {
+        float[] result = decodeWithMediaCodec(inputFile);
+        Log.d(TAG, "✅ Decode thành công. Số mẫu (samples): " + result.length); // <--- THÊM
+        return result;
+    } catch (Exception e) {
+        Log.e(TAG, "❌ Lỗi MediaCodec, thử fallback...", e); // <--- THÊM
+        return readRawPcm(inputFile);
     }
+}
 
     private static float[] decodeWithMediaCodec(File inputFile) throws IOException {
         MediaExtractor extractor = new MediaExtractor();
