@@ -60,12 +60,11 @@ class _SpamListScreenState extends State<SpamListScreen> {
       ).showSnackBar(const SnackBar(content: Text('No items to export')));
       return;
     }
-    final header =
-        'phone,label,confidence,call_count,last_seen,caller_display_name';
+    final header = 'phone,label,call_count,last_seen,caller_display_name';
     final rows = items
         .map(
           (it) =>
-              '"${it.id}","${it.label}",${it.confidence.toStringAsFixed(2)},${it.callCount},"${_formatDate(it.lastSeen)}","${it.callerDisplayName.replaceAll('"', '""')}"',
+              '"${it.id}","${it.label}",${it.callCount},"${_formatDate(it.lastSeen)}","${it.callerDisplayName.replaceAll('"', '""')}"',
         )
         .join('\n');
     await Share.share('$header\n$rows', subject: 'Spam numbers export');
@@ -248,14 +247,7 @@ class _SpamListScreenState extends State<SpamListScreen> {
                                         color: Colors.black87,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Confidence: ${it.confidence.toStringAsFixed(1)}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.black54,
-                                      ),
-                                    ),
+                                    // confidence removed per request
                                   ],
                                 ),
                               ),

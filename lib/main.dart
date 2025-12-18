@@ -35,6 +35,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final List<Widget> _pages = [
     const Center(child: Text('Home (placeholder)')),
     const SpamListScreen(),
+    const Center(child: Text('AI Config (placeholder)')),
     const Center(child: Text('Export (placeholder)')),
   ];
 
@@ -47,6 +48,10 @@ class _MyHomePageState extends State<MyHomePage> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.black87,
+        unselectedItemColor: Colors.black54,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -55,6 +60,10 @@ class _MyHomePageState extends State<MyHomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.list_alt),
             label: 'Spam List',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.smart_toy_outlined),
+            label: 'AI Config',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.upload_outlined),
