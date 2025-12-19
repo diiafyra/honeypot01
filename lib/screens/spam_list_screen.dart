@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/spam_item.dart';
+// add near other imports
+import 'spam_detail_screen.dart';
 
 class SpamListScreen extends StatefulWidget {
-  const SpamListScreen({super.key});
+  const SpamListScreen({super.key, required this.navKey});
+  final GlobalKey<NavigatorState> navKey;
 
   @override
   State<SpamListScreen> createState() => _SpamListScreenState();
@@ -177,8 +180,10 @@ class _SpamListScreenState extends State<SpamListScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
+                final docs = snapshot.data!.docs;
+                final idToDoc = {for (final d in docs) d.id: d};
                 final items = _filterItems(
-                  snapshot.data!.docs.map((d) => SpamItem.fromDoc(d)).toList(),
+                  docs.map((d) => SpamItem.fromDoc(d)).toList(),
                   _query,
                 );
 
@@ -196,70 +201,91 @@ class _SpamListScreenState extends State<SpamListScreen> {
                         horizontal: 12,
                         vertical: 6,
                       ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.black.withOpacity(0.04),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          final docSnap = idToDoc[it.id];
+                          if (docSnap == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Document not found'),
+                              ),
+                            );
+                            return;
+                          }
+                          widget.navKey.currentState!.push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  SpamDetailScreen(doc: docSnap, item: it),
                             ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 52,
-                                height: 52,
-                                decoration: BoxDecoration(
-                                  color: _accent,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      it.id,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Phân loại: ${it.label}',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                    // confidence removed per request
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                _formatDate(it.lastSeen),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black54,
-                                ),
+                          );
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.black.withOpacity(0.04),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                               ),
                             ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 52,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    color: _accent,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        it.id,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Phân loại: ${it.label}',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      // confidence removed per request
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  _formatDate(it.lastSeen),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

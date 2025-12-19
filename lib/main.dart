@@ -32,44 +32,80 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 1; // default to Spam List
-  final List<Widget> _pages = [
-    const Center(child: Text('Home (placeholder)')),
-    const SpamListScreen(),
-    const Center(child: Text('AI Config (placeholder)')),
-    const Center(child: Text('Export (placeholder)')),
-  ];
+  final int _pageCount = 4;
+  late final List<GlobalKey<NavigatorState>> _navKeys = List.generate(
+    4,
+    (_) => GlobalKey<NavigatorState>(),
+  );
+
+  Widget _buildNavigator(int index, Widget child) {
+    return Navigator(
+      key: _navKeys[index],
+      onGenerateRoute: (settings) =>
+          MaterialPageRoute(builder: (_) => child, settings: settings),
+    );
+  }
 
   void _onItemTapped(int index) => setState(() => _selectedIndex = index);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(child: _pages[_selectedIndex]),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.black87,
-        unselectedItemColor: Colors.black54,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'Home',
+    return WillPopScope(
+      onWillPop: () async {
+        final currentNavigator = _navKeys[_selectedIndex].currentState;
+        if (currentNavigator != null && currentNavigator.canPop()) {
+          currentNavigator.pop();
+          return false;
+        }
+        return true; // allow system to handle (exit app)
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: IndexedStack(
+            index: _selectedIndex,
+            children: [
+              _buildNavigator(
+                0,
+                const Center(child: Text('Home (placeholder)')),
+              ),
+              _buildNavigator(1, SpamListScreen(navKey: _navKeys[1])),
+              _buildNavigator(
+                2,
+                const Center(child: Text('AI Config (placeholder)')),
+              ),
+              _buildNavigator(
+                3,
+                const Center(child: Text('Export (placeholder)')),
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list_alt),
-            label: 'Spam List',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.smart_toy_outlined),
-            label: 'AI Config',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.upload_outlined),
-            label: 'Export',
-          ),
-        ],
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: Colors.black87,
+          unselectedItemColor: Colors.black54,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.list_alt),
+              label: 'Spam List',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.smart_toy_outlined),
+              label: 'AI Config',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.upload_outlined),
+              label: 'Export',
+            ),
+          ],
+        ),
       ),
     );
   }
