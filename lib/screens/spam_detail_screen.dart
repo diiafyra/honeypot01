@@ -1,7 +1,75 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
 import '../models/spam_item.dart';
+import '../widgets/audio_player_bar.dart';
+import 'package:path/path.dart' as p;
+
+Future<String?> _resolveLocalAudioPath(String rawPath) async {
+  if (rawPath.trim().isEmpty) return null;
+  var pathStr = rawPath.trim();
+  if (pathStr.startsWith('file://'))
+    pathStr = pathStr.replaceFirst('file://', '');
+
+  try {
+    // If it's an existing file, return it
+    final entType = await FileSystemEntity.type(pathStr, followLinks: false);
+    if (entType == FileSystemEntityType.file) {
+      final f = File(pathStr);
+      if (await f.exists()) return pathStr;
+    }
+
+    // If it's a directory, list files and pick the newest matching audio extension
+    final dir = Directory(pathStr);
+    if (await dir.exists()) {
+      final exts = ['.mp3', '.m4a', '.wav', '.ogg', '.3gp', '.aac', '.flac'];
+      final files = <File>[];
+      await for (final e in dir.list(recursive: false, followLinks: false)) {
+        if (e is File) {
+          final ext = p.extension(e.path).toLowerCase();
+          if (exts.contains(ext)) files.add(e);
+        }
+      }
+      if (files.isNotEmpty) {
+        files.sort(
+          (a, b) => b.statSync().modified.compareTo(a.statSync().modified),
+        );
+        return files.first.path;
+      }
+    }
+
+    // Try parent directory match for base filename (e.g., path without ext)
+    final parent = Directory(p.dirname(pathStr));
+    if (await parent.exists()) {
+      final base = p.basenameWithoutExtension(pathStr).toLowerCase();
+      if (base.isNotEmpty) {
+        final exts = ['.mp3', '.m4a', '.wav', '.ogg', '.3gp', '.aac', '.flac'];
+        final candidates = <File>[];
+        await for (final ent in parent.list(
+          recursive: false,
+          followLinks: false,
+        )) {
+          if (ent is File) {
+            final name = p.basenameWithoutExtension(ent.path).toLowerCase();
+            final ext = p.extension(ent.path).toLowerCase();
+            if (name == base && exts.contains(ext)) candidates.add(ent);
+          }
+        }
+        if (candidates.isNotEmpty) {
+          candidates.sort(
+            (a, b) => b.statSync().modified.compareTo(a.statSync().modified),
+          );
+          return candidates.first.path;
+        }
+      }
+    }
+  } catch (e) {
+    debugPrint('resolveLocalAudioPath error for "$rawPath": $e');
+    return null;
+  }
+  return null;
+}
 
 class SpamDetailScreen extends StatelessWidget {
   final DocumentSnapshot<Map<String, dynamic>> doc;
@@ -211,6 +279,29 @@ class SpamDetailScreen extends StatelessWidget {
                               ? DateFormat('HH:mm:ss dd MMM yyyy').format(ts)
                               : '';
 
+                          // resolve audio path (several possible field names)
+                          final audioPathRaw =
+                              data['file_path'] ??
+                              data['local_path'] ??
+                              data['audio_path'] ??
+                              data['path'] ??
+                              data['file'] ??
+                              data['audio_file'] ??
+                              data['filePath'] ??
+                              data['audio'] ??
+                              data['file_uri'] ??
+                              data['fileUri'] ??
+                              data['audio_uri'] ??
+                              data['audioUri'];
+                          String? audioPath;
+                          if (audioPathRaw is String &&
+                              audioPathRaw.isNotEmpty) {
+                            audioPath = audioPathRaw;
+                            if (audioPath.startsWith('file://')) {
+                              audioPath = audioPath.replaceFirst('file://', '');
+                            }
+                          }
+
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8.0),
                             child: Container(
@@ -248,6 +339,45 @@ class SpamDetailScreen extends StatelessWidget {
                                     ),
                                   if (timeStr.isNotEmpty)
                                     const SizedBox(height: 8),
+
+                                  // audio bar (local file) or fallback message
+                                  if (audioPath != null)
+                                    FutureBuilder<String?>(
+                                      future: _resolveLocalAudioPath(audioPath),
+                                      builder: (context, snap) {
+                                        if (snap.connectionState !=
+                                            ConnectionState.done) {
+                                          return const SizedBox(
+                                            height: 56,
+                                            child: Center(
+                                              child:
+                                                  CircularProgressIndicator(),
+                                            ),
+                                          );
+                                        }
+                                        final resolved = snap.data;
+                                        if (resolved == null ||
+                                            resolved.isEmpty) {
+                                          return const Text(
+                                            'no file path found',
+                                            style: TextStyle(
+                                              color: Colors.black54,
+                                            ),
+                                          );
+                                        }
+                                        return AudioPlayerBar(
+                                          source: resolved,
+                                          isLocal: true,
+                                        );
+                                      },
+                                    )
+                                  else
+                                    const Text(
+                                      'no file path found',
+                                      style: TextStyle(color: Colors.black54),
+                                    ),
+
+                                  const SizedBox(height: 8),
                                   Text(transcript),
                                   const SizedBox(height: 8),
                                   const Divider(
