@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:honeypot01/provider/ai_key_provider.dart';
 import 'package:honeypot01/provider/label_provider.dart';
 import 'package:honeypot01/screens/ai_config_screen.dart';
+import 'package:honeypot01/screens/export_screen.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'screens/spam_list_screen.dart';
@@ -83,10 +84,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               _buildNavigator(1, SpamListScreen(navKey: _navKeys[1])),
               _buildNavigator(2, AIConfigScreen(navKey: _navKeys[2])),
-              _buildNavigator(
-                3,
-                const Center(child: Text('Export (placeholder)')),
-              ),
+              _buildNavigator(3, ExportScreen(navKey: _navKeys[3])),
             ],
           ),
         ),

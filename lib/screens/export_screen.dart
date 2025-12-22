@@ -1,0 +1,380 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'dart:io';
+import 'dart:convert';
+import '../models/spam_item.dart';
+
+class ExportScreen extends StatefulWidget {
+  const ExportScreen({super.key, required this.navKey});
+  final GlobalKey<NavigatorState> navKey;
+
+  @override
+  State<ExportScreen> createState() => _ExportScreenState();
+}
+
+class _ExportScreenState extends State<ExportScreen> {
+  int _selectedOption = 0;
+  bool _isLoading = false;
+
+  static const String _documentsPath =
+      '/storage/emulated/0/Documents/honeypot1';
+
+  String _formatDate(DateTime d) {
+    if (d.millisecondsSinceEpoch == 0) return '—';
+    return DateFormat('dd MMM yyyy').format(d);
+  }
+
+  Future<List<SpamItem>> _fetchSpamItems() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('spam_numbers')
+        .orderBy('last_seen', descending: true)
+        .get();
+
+    return snapshot.docs.map((doc) => SpamItem.fromDoc(doc)).toList();
+  }
+
+  Future<List<SpamItem>> _fetchSpamItemsThisMonth() async {
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('spam_numbers')
+        .where(
+          'last_seen',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
+        )
+        .orderBy('last_seen', descending: true)
+        .get();
+
+    return snapshot.docs.map((doc) => SpamItem.fromDoc(doc)).toList();
+  }
+
+  Future<void> _exportCsv() async {
+    setState(() => _isLoading = true);
+
+    try {
+      if (_selectedOption == 2) {
+        // Export latest month/year only
+        final items = await _fetchSpamItems();
+
+        if (!mounted) return;
+
+        if (items.isEmpty) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('No items to export')));
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        // Find the latest month from all items
+        String latestMonthKey = '';
+        for (final item in items) {
+          if (item.lastSeen.millisecondsSinceEpoch > 0) {
+            final monthKey = DateFormat('yyyyMM').format(item.lastSeen);
+            if (latestMonthKey.isEmpty ||
+                monthKey.compareTo(latestMonthKey) > 0) {
+              latestMonthKey = monthKey;
+            }
+          }
+        }
+
+        if (latestMonthKey.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No items with valid dates to export'),
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        // Filter items for the latest month
+        final latestMonthItems = items
+            .where(
+              (item) =>
+                  item.lastSeen.millisecondsSinceEpoch > 0 &&
+                  DateFormat('yyyyMM').format(item.lastSeen) == latestMonthKey,
+            )
+            .toList();
+
+        if (latestMonthItems.isEmpty) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('No items to export')));
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        // Create file for latest month
+        final header = 'phone,label';
+        final rows = latestMonthItems
+            .map((it) => '"${it.id}","${it.label}"')
+            .join('\n');
+        final filename = 'spamNumbers_$latestMonthKey.csv';
+        final filePath = await _saveFile('$header\n$rows', filename);
+
+        if (!mounted) return;
+
+        _showExportDialog(filePath);
+      } else {
+        // Original logic for options 0 and 1
+        List<SpamItem> items;
+
+        if (_selectedOption == 0) {
+          items = await _fetchSpamItems();
+        } else {
+          items = await _fetchSpamItems();
+        }
+
+        if (!mounted) return;
+
+        if (items.isEmpty) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('No items to export')));
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        String header;
+        String rows;
+
+        if (_selectedOption == 1) {
+          header = 'phone';
+          rows = items.map((it) => '"${it.id}"').join('\n');
+        } else {
+          header = 'phone,label';
+          rows = items.map((it) => '"${it.id}","${it.label}"').join('\n');
+        }
+
+        final now = DateTime.now();
+        final timestamp = DateFormat('yyyyMMdd_HHmmss').format(now);
+        final filename = 'spamNumbers_$timestamp.csv';
+
+        final filePath = await _saveFile('$header\n$rows', filename);
+
+        if (!mounted) return;
+
+        _showExportDialog(filePath);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error exporting: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<String> _saveFile(String content, String filename) async {
+    try {
+      final exportDir = Directory(_documentsPath);
+
+      if (!await exportDir.exists()) {
+        await exportDir.create(recursive: true);
+      }
+
+      // Add UTF-8 BOM for proper encoding in Excel
+      final contentWithBOM = '\uFEFF$content';
+
+      final file = File('${exportDir.path}/$filename');
+      await file.writeAsString(contentWithBOM, encoding: utf8);
+
+      return file.path;
+    } catch (e) {
+      throw 'Failed to save file: $e';
+    }
+  }
+
+  void _showExportDialog(String filePath) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Export'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'File da được lưu tại đây',
+                style: TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: SelectableText(
+                  filePath,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue,
+                    fontFamily: 'Courier',
+                  ),
+                  maxLines: 4,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton.icon(
+              onPressed: () async {
+                try {
+                  await Share.shareXFiles([
+                    XFile(filePath),
+                  ], text: 'Spam numbers export');
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Cannot open file: $e')),
+                    );
+                  }
+                }
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+              },
+              icon: const Icon(Icons.folder_open),
+              label: const Text('Open'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F8FB),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: Text(
+                  'EXPORT',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 32.0),
+                child: Text(
+                  'Danh sách để dễ export dữ liệu csv.',
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                ),
+              ),
+              _buildRadioOption(
+                value: 0,
+                title: 'Xuất toàn bộ số và phân loại',
+                description: 'Export all numbers with classification labels',
+              ),
+              const SizedBox(height: 16),
+              _buildRadioOption(
+                value: 1,
+                title: 'Xuất toàn bộ số',
+                description: 'Export phone numbers only',
+              ),
+              const SizedBox(height: 16),
+              _buildRadioOption(
+                value: 2,
+                title: 'Xuất toàn bộ số và phân loại theo tháng',
+                description: 'Export numbers with labels from the latest month',
+              ),
+              const SizedBox(height: 48),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _exportCsv,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text(
+                          'Export',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRadioOption({
+    required int value,
+    required String title,
+    required String description,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: _selectedOption == value ? Colors.blue : Colors.grey.shade300,
+          width: _selectedOption == value ? 2 : 1,
+        ),
+      ),
+      child: RadioListTile<int>(
+        value: value,
+        groupValue: _selectedOption,
+        onChanged: (v) => setState(() => _selectedOption = v ?? 0),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: Colors.black87,
+          ),
+        ),
+        subtitle: Text(
+          description,
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+    );
+  }
+}
