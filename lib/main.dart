@@ -9,9 +9,7 @@ import 'screens/spam_list_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(
     MultiProvider(
@@ -23,7 +21,6 @@ void main() async {
     ),
   );
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -85,10 +82,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 const Center(child: Text('Home (placeholder)')),
               ),
               _buildNavigator(1, SpamListScreen(navKey: _navKeys[1])),
-              _buildNavigator(
-                2,
-                AIConfigScreen(navKey: _navKeys[2])
-              ),
+              _buildNavigator(2, AIConfigScreen(navKey: _navKeys[2])),
               _buildNavigator(
                 3,
                 const Center(child: Text('Export (placeholder)')),

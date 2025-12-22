@@ -9,8 +9,9 @@ import 'package:path/path.dart' as p;
 Future<String?> _resolveLocalAudioPath(String rawPath) async {
   if (rawPath.trim().isEmpty) return null;
   var pathStr = rawPath.trim();
-  if (pathStr.startsWith('file://'))
+  if (pathStr.startsWith('file://')) {
     pathStr = pathStr.replaceFirst('file://', '');
+  }
 
   try {
     // If it's an existing file, return it
@@ -90,6 +91,7 @@ class SpamDetailScreen extends StatelessWidget {
         data['caller_display_name'] ?? item.callerDisplayName ?? '';
     final callType =
         data['handle_presentation'] ?? item.handlePresentation ?? 'UNKNOWN';
+    final label = data['label'] ?? item.label ?? '';
     final callLogsStream = FirebaseFirestore.instance
         .collection('tool_call_logs')
         .where('spam_number', isEqualTo: item.id)
@@ -126,12 +128,12 @@ class SpamDetailScreen extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
-                    'Call type: $callType',
+                    'Phân loại: ${label.toString()}',
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     'Last call: ${_formatDate(item.lastSeen)}',
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
@@ -179,6 +181,24 @@ class SpamDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Flexible(flex: 2, child: Text(verification.toString())),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Flexible(
+                        flex: 3,
+                        child: Text(
+                          'Handle Presentation:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(flex: 2, child: Text(callType.toString())),
                     ],
                   ),
                   const SizedBox(height: 8),

@@ -2,10 +2,14 @@ package com.example.honeypot01.repository;
 
 import android.util.Log;
 
+import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.DocumentSnapshot;
+
 import com.example.honeypot01.model.ToolCallLog;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.DocumentSnapshot;
 
 public class ToolCallLogsRepository {
 
@@ -39,15 +43,16 @@ public class ToolCallLogsRepository {
                 .limit(20)
                 .get();
 
-        var snapshot = com.google.android.gms.tasks.Tasks.await(task);
+        QuerySnapshot snapshot = com.google.android.gms.tasks.Tasks.await(task);
 
         int index = 1;
 
-        for (QueryDocumentSnapshot doc : snapshot) {
+        for (DocumentSnapshot doc : snapshot.getDocuments()) {
             String transcript = doc.getString("transcript");
 
             if (transcript != null && !transcript.isEmpty()) {
 
+                // 🔍 Log từng transcript
                 Log.d(TAG,
                         "[" + index + "] " + transcript);
 
@@ -61,4 +66,3 @@ public class ToolCallLogsRepository {
 
 
 }
-
