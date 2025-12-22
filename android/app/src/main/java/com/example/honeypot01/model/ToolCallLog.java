@@ -17,6 +17,8 @@ public class ToolCallLog {
     private int duration;
     @PropertyName("transcript")
     private String  transcript;
+    @PropertyName("file_path")
+    private String  filePath;
 
     public ToolCallLog() {}
 
@@ -24,12 +26,14 @@ public class ToolCallLog {
                        String spamNumber,
                        Long callTime,
                        int duration,
-                       String transcript) {
+                       String transcript,
+                       String filePath) {
         this.potNumber = potNumber;
         this.spamNumber = spamNumber;
         this.callTime = callTime;
         this.duration = duration;
         this.transcript = transcript;
+        this.filePath = filePath;
     }
 
     @PropertyName("pot_number")
@@ -46,4 +50,6 @@ public class ToolCallLog {
 
     @PropertyName("transcript")
     public String getTranscript() { return transcript; }
+    @PropertyName("file_path")
+    public String getFilePath() { return filePath; }
 }

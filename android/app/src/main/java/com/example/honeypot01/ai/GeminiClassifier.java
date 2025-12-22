@@ -1,7 +1,11 @@
 package com.example.honeypot01.ai;
 
+import static com.example.honeypot01.repository.AIKeyRepository.getCurrentKey;
+import static com.example.honeypot01.repository.AIKeyRepository.moveToNextKey;
+
 import android.util.Log;
 
+import com.example.honeypot01.repository.AIKeyRepository;
 import com.example.honeypot01.repository.LabelRepository;
 import com.example.honeypot01.repository.ToolCallLogsRepository;
 import com.google.gson.Gson;
@@ -27,53 +31,66 @@ public class GeminiClassifier {
     public static String classifyConversation(String conversation) {
 
         try {
-            // 1. Load labels
             List<String> labels = LabelRepository.getAllLabelsBlocking();
             labels.add("unknown");
-            Log.d(TAG, labels.toString());
 
-            // 2. Prompt
             String prompt = buildPrompt(conversation, labels);
 
-            // 3. Body (viết tay cho an toàn Android)
             String body =
                     "{ \"contents\": [ { \"parts\": [ { \"text\": "
                             + gson.toJson(prompt)
                             + " } ] } ] }";
 
-            Request request = new Request.Builder()
-                    .url(GeminiConfig.ENDPOINT)
-                    .addHeader("x-goog-api-key", GeminiConfig.API_KEY)
-                    .addHeader("Content-Type", "application/json")
-                    .post(RequestBody.create(body, JSON))
-                    .build();
-
-            // 4. Call Gemini
-            try (Response response = client.newCall(request).execute()) {
-
-                if (!response.isSuccessful()) {
-                    Log.e(TAG, response.body().string());
+            while (true) {
+                AIKeyRepository.loadKeysBlocking();
+                String apiKey = getCurrentKey();
+                if (apiKey == null) {
+                    Log.e(TAG, "No API key available");
                     return "unknown";
                 }
 
-                String json = response.body().string();
+                Request request = new Request.Builder()
+                        .url(GeminiConfig.ENDPOINT)
+                        .addHeader("x-goog-api-key", apiKey)
+                        .addHeader("Content-Type", "application/json")
+                        .post(RequestBody.create(body, JSON))
+                        .build();
 
-                JsonObject root = gson.fromJson(json, JsonObject.class);
-                String result = root
-                        .getAsJsonArray("candidates")
-                        .get(0).getAsJsonObject()
-                        .getAsJsonObject("content")
-                        .getAsJsonArray("parts")
-                        .get(0).getAsJsonObject()
-                        .get("text").getAsString()
-                        .trim();
+                try (Response response = client.newCall(request).execute()) {
 
-                // 5. Validate label
-                if (!labels.contains(result)) {
-                    return "unknown";
+                    if (response.code() == 401 ||
+                            response.code() == 403 ||
+                            response.code() == 429) {
+
+                        Log.w(TAG, "Key failed: " + response.code());
+
+                        if (!moveToNextKey()) {
+                            Log.e(TAG, "All API keys exhausted");
+                            return "unknown";
+                        }
+
+                        continue; // 🔁 thử key tiếp theo
+                    }
+
+                    if (!response.isSuccessful()) {
+                        Log.e(TAG, response.body().string());
+                        return "unknown";
+                    }
+
+                    String json = response.body().string();
+
+                    JsonObject root = gson.fromJson(json, JsonObject.class);
+                    String result = root
+                            .getAsJsonArray("candidates")
+                            .get(0).getAsJsonObject()
+                            .getAsJsonObject("content")
+                            .getAsJsonArray("parts")
+                            .get(0).getAsJsonObject()
+                            .get("text").getAsString()
+                            .trim();
+
+                    return labels.contains(result) ? result : "unknown";
                 }
-
-                return result;
             }
 
         } catch (Exception e) {
