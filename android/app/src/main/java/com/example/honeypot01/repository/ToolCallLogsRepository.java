@@ -2,6 +2,9 @@ package com.example.honeypot01.repository;
 
 import android.util.Log;
 
+import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.DocumentSnapshot;
+
 import com.example.honeypot01.model.ToolCallLog;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
