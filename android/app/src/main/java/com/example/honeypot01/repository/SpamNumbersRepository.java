@@ -1,7 +1,7 @@
-package com.example.honeypot01.repository;
+package cmc.cs.honeypot01.repository;
 
-import com.example.honeypot01.model.CallDetailsHolder;
-import com.example.honeypot01.model.SpamNumber;
+import cmc.cs.honeypot01.model.CallDetailsHolder;
+import cmc.cs.honeypot01.model.SpamNumber;
 import com.google.firebase.firestore.*;
 
 import java.util.HashMap;

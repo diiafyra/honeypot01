@@ -1,13 +1,13 @@
-package com.example.honeypot01.ai;
+package cmc.cs.honeypot01.ai;
 
-import static com.example.honeypot01.repository.AIKeyRepository.getCurrentKey;
-import static com.example.honeypot01.repository.AIKeyRepository.moveToNextKey;
+import static cmc.cs.honeypot01.repository.AIKeyRepository.getCurrentKey;
+import static cmc.cs.honeypot01.repository.AIKeyRepository.moveToNextKey;
 
 import android.util.Log;
 
-import com.example.honeypot01.repository.AIKeyRepository;
-import com.example.honeypot01.repository.LabelRepository;
-import com.example.honeypot01.repository.ToolCallLogsRepository;
+import cmc.cs.honeypot01.repository.AIKeyRepository;
+import cmc.cs.honeypot01.repository.LabelRepository;
+import cmc.cs.honeypot01.repository.ToolCallLogsRepository;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 

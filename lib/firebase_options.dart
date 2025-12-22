@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1074664684630',
     projectId: 'honeypot01-bdd42',
     storageBucket: 'honeypot01-bdd42.firebasestorage.app',
-    iosBundleId: 'com.example.honeypot01',
+    iosBundleId: 'cmc.cs.honeypot01',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1074664684630',
     projectId: 'honeypot01-bdd42',
     storageBucket: 'honeypot01-bdd42.firebasestorage.app',
-    iosBundleId: 'com.example.honeypot01',
+    iosBundleId: 'cmc.cs.honeypot01',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

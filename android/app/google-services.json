@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:1074664684630:android:f0922c545c317c69964ff7",
         "android_client_info": {
-          "package_name": "com.example.honeypot01"
+          "package_name": "cmc.cs.honeypot01"
         }
       },
       "oauth_client": [],

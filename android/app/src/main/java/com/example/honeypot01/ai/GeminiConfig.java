@@ -1,4 +1,4 @@
-package com.example.honeypot01.ai;
+package cmc.cs.honeypot01.ai;
 
 public class GeminiConfig {
 

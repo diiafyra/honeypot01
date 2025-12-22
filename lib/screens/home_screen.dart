@@ -26,7 +26,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const platform = MethodChannel('com.example.honeypot01/permissions');
+  static const platform = MethodChannel('cmc.cs.honeypot01/permissions');
 
   // Permission status map
   Map<String, bool> permissionStatus = {

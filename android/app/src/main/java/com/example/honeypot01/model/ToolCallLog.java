@@ -1,4 +1,4 @@
-package com.example.honeypot01.model;
+package cmc.cs.honeypot01.model;
 
 import com.google.firebase.firestore.PropertyName;
 

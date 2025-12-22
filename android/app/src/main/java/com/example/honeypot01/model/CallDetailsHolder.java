@@ -1,4 +1,4 @@
-package com.example.honeypot01.model;
+package cmc.cs.honeypot01.model;
 
 public class CallDetailsHolder {
     private String phoneNumber;

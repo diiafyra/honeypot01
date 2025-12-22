@@ -1,4 +1,4 @@
-package com.example.honeypot01.service;
+package cmc.cs.honeypot01.service;
 
 import android.Manifest;
 import android.accessibilityservice.AccessibilityService;
@@ -25,9 +25,9 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 
-import com.example.honeypot01.R;
-import com.example.honeypot01.model.CallDetailsHolder;
-import com.example.honeypot01.repository.CallDataManager;
+import cmc.cs.honeypot01.R;
+import cmc.cs.honeypot01.model.CallDetailsHolder;
+import cmc.cs.honeypot01.repository.CallDataManager;
 
 import java.util.concurrent.Executor;
 

@@ -1,4 +1,4 @@
-package com.example.honeypot01;
+package cmc.cs.honeypot01;
 
 import android.Manifest;
 import android.app.role.RoleManager;
@@ -19,7 +19,7 @@ import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.example.honeypot01.service.AutoReceiveSpamService;
+import cmc.cs.honeypot01.service.AutoReceiveSpamService;
 
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -28,7 +28,7 @@ import io.flutter.plugin.common.MethodChannel;
 public class MainActivity extends FlutterActivity {
 
     private static final String TAG = "MainActivity";
-    private static final String CHANNEL = "com.example.honeypot01/permissions";
+    private static final String CHANNEL = "cmc.cs.honeypot01/permissions";
 
     // Request codes
     private static final int REQUEST_PERMISSIONS = 100;

@@ -1,4 +1,4 @@
-package com.example.honeypot01.repository;
+package cmc.cs.honeypot01.repository;
 
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.firestore.*;

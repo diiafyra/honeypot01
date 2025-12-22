@@ -1,4 +1,4 @@
-package com.example.honeypot01.stt;
+package cmc.cs.honeypot01.stt;
 
 import android.media.MediaCodec;
 import android.media.MediaExtractor;

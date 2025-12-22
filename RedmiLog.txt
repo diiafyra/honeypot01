@@ -1,21 +1,21 @@
-2025-12-17 16:07:02.399  4020-4020  MainActivity            com.example.honeypot01               D  === PERMISSION STATUS ===
-2025-12-17 16:07:02.400  4020-4020  MainActivity            com.example.honeypot01               D  ok  READ_PHONE_STATE
-2025-12-17 16:07:02.400  4020-4020  MainActivity            com.example.honeypot01               D  ok  ANSWER_PHONE_CALLS
-2025-12-17 16:07:02.400  4020-4020  MainActivity            com.example.honeypot01               D  ok  READ_EXTERNAL_STORAGE
-2025-12-17 16:07:02.404  4020-4020  MainActivity            com.example.honeypot01               D  ok  ALL_FILES_ACCESS
-2025-12-17 16:07:02.405  4020-4020  MainActivity            com.example.honeypot01               D  ok  CALL_SCREENING_ROLE
-2025-12-17 16:07:02.405  4020-4020  MainActivity            com.example.honeypot01               D  ========================
-2025-12-17 16:07:06.680  4020-4055  GED                     com.example.honeypot01               I  ged_boost_gpu_freq, level 100, eOrigin 2, final_idx 2, oppidx_max 2, oppidx_min 0
-2025-12-17 16:07:06.758  4020-4020  PhoneWindow             com.example.honeypot01               V  DecorView setVisiblity: visibility = 4, Parent = android.view.ViewRootImpl@b0727b, this = DecorView@4246898[MainActivity]
-2025-12-17 16:07:09.224  4020-4020  CallScreeningService    com.example.honeypot01               D  Call Details Summary:
-2025-12-17 16:07:09.224  4020-4020  CallScreeningService    com.example.honeypot01               D     1. Number: 900
-2025-12-17 16:07:09.224  4020-4020  CallScreeningService    com.example.honeypot01               D     2. Verification: NOT_VERIFIED
-2025-12-17 16:07:09.224  4020-4020  CallScreeningService    com.example.honeypot01               D     3. Presentation: ALLOWED
-2025-12-17 16:07:09.224  4020-4020  CallScreeningService    com.example.honeypot01               D     4. Display Name: UNKNOWN
-2025-12-17 16:07:09.224  4020-4020  AutoReceiveSpam         com.example.honeypot01               D  Pending call: 900
-2025-12-17 16:07:10.321  4020-4020  AutoReceiveSpam         com.example.honeypot01               D  CALL STARTED: 900
-2025-12-17 16:07:10.321  4020-4020  CallDataManager         com.example.honeypot01               D  Call Started: 900
-2025-12-17 16:07:16.153  4020-4020  AutoReceiveSpam         com.example.honeypot01               D  CALL ENDED: 900 (duration: 5s)
-2025-12-17 16:07:16.153  4020-4020  CallDataManager         com.example.honeypot01               D  Call Ended - duration: 5s
-2025-12-17 16:07:21.181  4020-4963  CallDataManager         com.example.honeypot01               D  Scanning audio directory: /storage/emulated/0/MIUI/sound_recorder/call_rec (files=98)
-2025-12-17 16:07:21.213  4020-4963  CallDataManager         com.example.honeypot01               D  Using audio file: 900(900)_20251217160712.mp3 | size=14208 | lastModified=1765962432000
+2025-12-17 16:07:02.399  4020-4020  MainActivity            cmc.cs.honeypot01               D  === PERMISSION STATUS ===
+2025-12-17 16:07:02.400  4020-4020  MainActivity            cmc.cs.honeypot01               D  ok  READ_PHONE_STATE
+2025-12-17 16:07:02.400  4020-4020  MainActivity            cmc.cs.honeypot01               D  ok  ANSWER_PHONE_CALLS
+2025-12-17 16:07:02.400  4020-4020  MainActivity            cmc.cs.honeypot01               D  ok  READ_EXTERNAL_STORAGE
+2025-12-17 16:07:02.404  4020-4020  MainActivity            cmc.cs.honeypot01               D  ok  ALL_FILES_ACCESS
+2025-12-17 16:07:02.405  4020-4020  MainActivity            cmc.cs.honeypot01               D  ok  CALL_SCREENING_ROLE
+2025-12-17 16:07:02.405  4020-4020  MainActivity            cmc.cs.honeypot01               D  ========================
+2025-12-17 16:07:06.680  4020-4055  GED                     cmc.cs.honeypot01               I  ged_boost_gpu_freq, level 100, eOrigin 2, final_idx 2, oppidx_max 2, oppidx_min 0
+2025-12-17 16:07:06.758  4020-4020  PhoneWindow             cmc.cs.honeypot01               V  DecorView setVisiblity: visibility = 4, Parent = android.view.ViewRootImpl@b0727b, this = DecorView@4246898[MainActivity]
+2025-12-17 16:07:09.224  4020-4020  CallScreeningService    cmc.cs.honeypot01               D  Call Details Summary:
+2025-12-17 16:07:09.224  4020-4020  CallScreeningService    cmc.cs.honeypot01               D     1. Number: 900
+2025-12-17 16:07:09.224  4020-4020  CallScreeningService    cmc.cs.honeypot01               D     2. Verification: NOT_VERIFIED
+2025-12-17 16:07:09.224  4020-4020  CallScreeningService    cmc.cs.honeypot01               D     3. Presentation: ALLOWED
+2025-12-17 16:07:09.224  4020-4020  CallScreeningService    cmc.cs.honeypot01               D     4. Display Name: UNKNOWN
+2025-12-17 16:07:09.224  4020-4020  AutoReceiveSpam         cmc.cs.honeypot01               D  Pending call: 900
+2025-12-17 16:07:10.321  4020-4020  AutoReceiveSpam         cmc.cs.honeypot01               D  CALL STARTED: 900
+2025-12-17 16:07:10.321  4020-4020  CallDataManager         cmc.cs.honeypot01               D  Call Started: 900
+2025-12-17 16:07:16.153  4020-4020  AutoReceiveSpam         cmc.cs.honeypot01               D  CALL ENDED: 900 (duration: 5s)
+2025-12-17 16:07:16.153  4020-4020  CallDataManager         cmc.cs.honeypot01               D  Call Ended - duration: 5s
+2025-12-17 16:07:21.181  4020-4963  CallDataManager         cmc.cs.honeypot01               D  Scanning audio directory: /storage/emulated/0/MIUI/sound_recorder/call_rec (files=98)
+2025-12-17 16:07:21.213  4020-4963  CallDataManager         cmc.cs.honeypot01               D  Using audio file: 900(900)_20251217160712.mp3 | size=14208 | lastModified=1765962432000

@@ -1,14 +1,14 @@
-package com.example.honeypot01.repository;
+package cmc.cs.honeypot01.repository;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
-import com.example.honeypot01.ai.GeminiClassifier;
-import com.example.honeypot01.helper.FileHelper;
-import com.example.honeypot01.model.*;
-import com.example.honeypot01.stt.AssemblyAI;
-import com.example.honeypot01.stt.SherpaOnnxStt;
+import cmc.cs.honeypot01.ai.GeminiClassifier;
+import cmc.cs.honeypot01.helper.FileHelper;
+import cmc.cs.honeypot01.model.*;
+import cmc.cs.honeypot01.stt.AssemblyAI;
+import cmc.cs.honeypot01.stt.SherpaOnnxStt;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.File;
