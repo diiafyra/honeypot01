@@ -17,6 +17,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
@@ -42,9 +43,9 @@ android {
 }
 dependencies {
     implementation("com.google.firebase:firebase-firestore:26.0.2")
-    implementation("com.alphacephei:vosk-android:0.3.47")
-    implementation("com.squareup.okhttp3:okhttp:5.3.2")
+    implementation(files("libs/sherpa-onnx-1.12.19.aar"))
     implementation("com.google.code.gson:gson:2.13.2")
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
 }
 
 flutter {

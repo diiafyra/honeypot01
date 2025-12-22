@@ -162,7 +162,13 @@ public class AutoReceiveSpamService extends Service {
      * OFFHOOK: Cuộc gọi đang active → Track call start
      */
     private void handleOffhookState() {
-        if (!isCallActive && pendingCallDetails != null) {
+        if (!isCallActive) {
+            if (pendingCallDetails == null) {
+                Log.w(TAG, "Pending call details missing (CallScreeningService didn't trigger?). Creating placeholder.");
+                pendingCallDetails = new CallDetailsHolder();
+                pendingCallDetails.setPhoneNumber("UNKNOWN_" + System.currentTimeMillis());
+            }
+
             isCallActive = true;
             callStartTime = System.currentTimeMillis();
 
