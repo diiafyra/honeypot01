@@ -9,8 +9,9 @@ import 'package:path/path.dart' as p;
 Future<String?> _resolveLocalAudioPath(String rawPath) async {
   if (rawPath.trim().isEmpty) return null;
   var pathStr = rawPath.trim();
-  if (pathStr.startsWith('file://'))
+  if (pathStr.startsWith('file://')) {
     pathStr = pathStr.replaceFirst('file://', '');
+  }
 
   try {
     // If it's an existing file, return it
@@ -128,11 +129,6 @@ class SpamDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Call type: $callType',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
                     'Last call: ${_formatDate(item.lastSeen)}',
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
@@ -179,6 +175,24 @@ class SpamDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Flexible(flex: 2, child: Text(verification.toString())),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Flexible(
+                        flex: 3,
+                        child: Text(
+                          'Handle Presentation:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(flex: 2, child: Text(callType.toString())),
                     ],
                   ),
                   const SizedBox(height: 8),
