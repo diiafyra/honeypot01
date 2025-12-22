@@ -1,13 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:honeypot01/provider/ai_key_provider.dart';
+import 'package:honeypot01/provider/label_provider.dart';
+import 'package:honeypot01/screens/ai_config_screen.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'screens/spam_list_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const MyApp());
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AIKeyProvider()),
+        ChangeNotifierProvider(create: (_) => LabelProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -71,7 +87,7 @@ class _MyHomePageState extends State<MyHomePage> {
               _buildNavigator(1, SpamListScreen(navKey: _navKeys[1])),
               _buildNavigator(
                 2,
-                const Center(child: Text('AI Config (placeholder)')),
+                AIConfigScreen(navKey: _navKeys[2])
               ),
               _buildNavigator(
                 3,

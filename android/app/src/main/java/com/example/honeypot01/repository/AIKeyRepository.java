@@ -2,7 +2,6 @@ package com.example.honeypot01.repository;
 
 import android.util.Log;
 
-import com.example.honeypot01.model.AIKey;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
@@ -16,7 +15,7 @@ public class AIKeyRepository {
 
     private static final String TAG = "AIKeyRepository";
 
-    private static final List<AIKey> keyList =
+    private static final List<String> keyList =
             Collections.synchronizedList(new ArrayList<>());
 
     private static int currentIndex = 0;
@@ -40,9 +39,9 @@ public class AIKeyRepository {
             keyList.clear();
 
             for (var doc : snapshot.getDocuments()) {
-                AIKey key = doc.toObject(AIKey.class);
-                if (key != null && key.getApiKey() != null) {
-                    keyList.add(key);
+                String apiKey = doc.getId(); // 🔥 API KEY = document ID
+                if (apiKey != null && !apiKey.isBlank()) {
+                    keyList.add(apiKey);
                 }
             }
 
@@ -61,8 +60,9 @@ public class AIKeyRepository {
      */
     public static synchronized String getCurrentKey() {
         if (!loaded || keyList.isEmpty()) return null;
-        return keyList.get(currentIndex).getApiKey();
+        return keyList.get(currentIndex);
     }
+
 
     /**
      * Chuyển sang key tiếp theo

@@ -48,7 +48,6 @@ public class ToolCallLogsRepository {
 
             if (transcript != null && !transcript.isEmpty()) {
 
-                // 🔍 Log từng transcript
                 Log.d(TAG,
                         "[" + index + "] " + transcript);
 
