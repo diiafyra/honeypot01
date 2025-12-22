@@ -22,10 +22,13 @@ import androidx.core.content.ContextCompat;
 import com.example.honeypot01.service.AutoReceiveSpamService;
 
 import io.flutter.embedding.android.FlutterActivity;
+import io.flutter.embedding.engine.FlutterEngine;
+import io.flutter.plugin.common.MethodChannel;
 
 public class MainActivity extends FlutterActivity {
 
     private static final String TAG = "MainActivity";
+    private static final String CHANNEL = "com.example.honeypot01/permissions";
 
     // Request codes
     private static final int REQUEST_PERMISSIONS = 100;
@@ -33,6 +36,36 @@ public class MainActivity extends FlutterActivity {
     private static final int REQUEST_ALL_FILES_ACCESS = 102;
 
     private Handler handler;
+    private MethodChannel.Result pendingResult;
+
+    @Override
+    public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
+        super.configureFlutterEngine(flutterEngine);
+
+        new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), CHANNEL)
+                .setMethodCallHandler((call, result) -> {
+                    switch (call.method) {
+                        case "hasCallScreeningRole":
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                result.success(hasCallScreeningRole());
+                            } else {
+                                result.success(true); // Not needed for older versions
+                            }
+                            break;
+                        case "requestCallScreeningRole":
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                pendingResult = result;
+                                requestCallScreeningRole();
+                            } else {
+                                result.success(true);
+                            }
+                            break;
+                        default:
+                            result.notImplemented();
+                            break;
+                    }
+                });
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -230,10 +263,15 @@ public class MainActivity extends FlutterActivity {
 
         } else if (requestCode == REQUEST_CALL_SCREENING) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                if (hasCallScreeningRole()) {
+                boolean granted = hasCallScreeningRole();
+                if (granted) {
                     Log.d(TAG, "Call Screening Role granted");
                 } else {
                     Log.e(TAG, "Call Screening Role denied");
+                }
+                if (pendingResult != null) {
+                    pendingResult.success(granted);
+                    pendingResult = null;
                 }
             }
             checkPermissions();

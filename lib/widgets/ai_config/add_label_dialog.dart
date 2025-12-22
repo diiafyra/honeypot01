@@ -31,19 +31,24 @@ class _AddLabelDialogState extends State<AddLabelDialog> {
 
     setState(() => _isSubmitting = true);
 
+    // Capture references before async gap
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(dialogContext);
+    final provider = context.read<LabelProvider>();
+
     try {
-      await context.read<LabelProvider>().addLabel(
+      await provider.addLabel(
         name: _nameController.text.trim(),
         description: _descController.text.trim(),
       );
 
       if (!mounted) return;
 
-      // Close dialog - use dialogContext here!
-      Navigator.of(dialogContext).pop();
+      // Close dialog
+      navigator.pop();
 
       // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Đã thêm phân loại thành công'),
           backgroundColor: Colors.green,
@@ -56,7 +61,7 @@ class _AddLabelDialogState extends State<AddLabelDialog> {
       setState(() => _isSubmitting = false);
 
       // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Lỗi: ${e.toString()}'),
           backgroundColor: Colors.red,
@@ -121,13 +126,13 @@ class _AddLabelDialogState extends State<AddLabelDialog> {
           ),
           child: _isSubmitting
               ? const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          )
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
               : const Text('Thêm'),
         ),
       ],

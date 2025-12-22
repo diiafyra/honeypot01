@@ -4,6 +4,7 @@ import 'package:honeypot01/provider/ai_key_provider.dart';
 import 'package:honeypot01/provider/label_provider.dart';
 import 'package:honeypot01/screens/ai_config_screen.dart';
 import 'package:honeypot01/screens/export_screen.dart';
+import 'package:honeypot01/screens/home_screen.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'screens/spam_list_screen.dart';
@@ -46,7 +47,6 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 1; // default to Spam List
-  final int _pageCount = 4;
   late final List<GlobalKey<NavigatorState>> _navKeys = List.generate(
     4,
     (_) => GlobalKey<NavigatorState>(),
@@ -64,24 +64,21 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
         final currentNavigator = _navKeys[_selectedIndex].currentState;
         if (currentNavigator != null && currentNavigator.canPop()) {
           currentNavigator.pop();
-          return false;
         }
-        return true; // allow system to handle (exit app)
       },
       child: Scaffold(
         body: SafeArea(
           child: IndexedStack(
             index: _selectedIndex,
             children: [
-              _buildNavigator(
-                0,
-                const Center(child: Text('Home (placeholder)')),
-              ),
+              _buildNavigator(0, HomeScreen(navKey: _navKeys[0])),
               _buildNavigator(1, SpamListScreen(navKey: _navKeys[1])),
               _buildNavigator(2, AIConfigScreen(navKey: _navKeys[2])),
               _buildNavigator(3, ExportScreen(navKey: _navKeys[3])),

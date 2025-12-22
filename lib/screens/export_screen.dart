@@ -21,30 +21,9 @@ class _ExportScreenState extends State<ExportScreen> {
   static const String _documentsPath =
       '/storage/emulated/0/Documents/honeypot1';
 
-  String _formatDate(DateTime d) {
-    if (d.millisecondsSinceEpoch == 0) return '—';
-    return DateFormat('dd MMM yyyy').format(d);
-  }
-
   Future<List<SpamItem>> _fetchSpamItems() async {
     final snapshot = await FirebaseFirestore.instance
         .collection('spam_numbers')
-        .orderBy('last_seen', descending: true)
-        .get();
-
-    return snapshot.docs.map((doc) => SpamItem.fromDoc(doc)).toList();
-  }
-
-  Future<List<SpamItem>> _fetchSpamItemsThisMonth() async {
-    final now = DateTime.now();
-    final startOfMonth = DateTime(now.year, now.month, 1);
-
-    final snapshot = await FirebaseFirestore.instance
-        .collection('spam_numbers')
-        .where(
-          'last_seen',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
-        )
         .orderBy('last_seen', descending: true)
         .get();
 
@@ -348,32 +327,55 @@ class _ExportScreenState extends State<ExportScreen> {
     required String title,
     required String description,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: _selectedOption == value ? Colors.blue : Colors.grey.shade300,
-          width: _selectedOption == value ? 2 : 1,
-        ),
-      ),
-      child: RadioListTile<int>(
-        value: value,
-        groupValue: _selectedOption,
-        onChanged: (v) => setState(() => _selectedOption = v ?? 0),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: Colors.black87,
+    return GestureDetector(
+      onTap: () => setState(() => _selectedOption = value),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: _selectedOption == value
+                ? Colors.blue
+                : Colors.grey.shade300,
+            width: _selectedOption == value ? 2 : 1,
           ),
         ),
-        subtitle: Text(
-          description,
-          style: const TextStyle(fontSize: 12, color: Colors.black54),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              Radio<int>(
+                value: value,
+                groupValue: _selectedOption,
+                onChanged: (v) => setState(() => _selectedOption = v ?? 0),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
     );
   }
