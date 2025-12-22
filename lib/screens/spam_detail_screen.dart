@@ -91,6 +91,7 @@ class SpamDetailScreen extends StatelessWidget {
         data['caller_display_name'] ?? item.callerDisplayName ?? '';
     final callType =
         data['handle_presentation'] ?? item.handlePresentation ?? 'UNKNOWN';
+    final label = data['label'] ?? item.label ?? '';
     final callLogsStream = FirebaseFirestore.instance
         .collection('tool_call_logs')
         .where('spam_number', isEqualTo: item.id)
@@ -127,7 +128,12 @@ class SpamDetailScreen extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Phân loại: ${label.toString()}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  const SizedBox(height: 6),
                   Text(
                     'Last call: ${_formatDate(item.lastSeen)}',
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
