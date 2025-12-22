@@ -53,7 +53,8 @@ public class CallDataManager {
                         call.getPhoneNumber(),
                         startTime,
                         (int) (duration / 1000),
-                        transcript
+                        transcript,
+                        audio != null ? audio.getAbsolutePath() : null
                 );
 
                 logRepo.save(log);
