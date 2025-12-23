@@ -6,7 +6,7 @@ import java.util.Arrays;
 
 public class FileHelper {
 
-    private static final String audioDir = "/storage/emulated/0/Recordings";
+    private static final String audioDir = "/storage/emulated/0/MIUI/sound_recorder/call_rec";
 
 
     public static File getLatestMp3() {

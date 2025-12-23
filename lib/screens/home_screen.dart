@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class _PermissionItem {
@@ -25,25 +24,23 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with WidgetsBindingObserver {
   static const platform = MethodChannel('cmc.cs.honeypot01/permissions');
 
-  // Permission status map
+  /// Permission status
   Map<String, bool> permissionStatus = {
     'phone': false,
     'allFiles': false,
     'callScreening': false,
   };
 
-  int totalNumbers = 0;
-  int totalCalls = 0;
-
   final List<_PermissionItem> allPermissions = [
     _PermissionItem(
       id: 'phone',
       title: 'Phone Permissions',
       icon: Icons.call_outlined,
-      description: 'Read phone state, answer calls, call logs',
+      description: 'Read phone state, answer calls, call logs, storage',
     ),
     _PermissionItem(
       id: 'allFiles',
@@ -62,27 +59,35 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkAllPermissions();
-    _fetchStats();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Re-check permissions when app returns to foreground
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkAllPermissions();
+    }
   }
 
   Future<void> _checkAllPermissions() async {
-    // Check phone permissions (READ_PHONE_STATE, ANSWER_PHONE_CALLS, READ_CALL_LOG)
-    final phoneGranted = await Permission.phone.isGranted;
-
-    // Check all files access (MANAGE_EXTERNAL_STORAGE)
-    final allFilesGranted = await Permission.manageExternalStorage.isGranted;
-
-    // Check call screening role via method channel
-    bool callScreeningGranted = false;
     try {
-      callScreeningGranted =
-          await platform.invokeMethod('hasCallScreeningRole') ?? false;
-    } catch (e) {
-      debugPrint('Error checking call screening role: $e');
-    }
+      final phoneGranted =
+          await platform.invokeMethod<bool>('hasPhonePermissions') ?? false;
+      final allFilesGranted =
+          await platform.invokeMethod<bool>('hasAllFilesAccess') ?? false;
+      final callScreeningGranted =
+          await platform.invokeMethod<bool>('hasCallScreeningRole') ?? false;
 
-    if (mounted) {
+      if (!mounted) return;
+
       setState(() {
         permissionStatus = {
           'phone': phoneGranted,
@@ -90,124 +95,130 @@ class _HomeScreenState extends State<HomeScreen> {
           'callScreening': callScreeningGranted,
         };
       });
+    } catch (e) {
+      debugPrint('Permission check error: $e');
     }
   }
 
-  Future<void> _fetchStats() async {
+  Future<void> _requestPermission(String id) async {
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('spam_numbers')
-          .get();
-
-      int totalCallsSum = 0;
-      for (final doc in snapshot.docs) {
-        final data = doc.data();
-        final callCount = data['call_count'] as int? ?? 0;
-        totalCallsSum += callCount;
-      }
-
-      if (mounted) {
-        setState(() {
-          totalNumbers = snapshot.docs.length;
-          totalCalls = totalCallsSum;
-        });
+      switch (id) {
+        case 'phone':
+          await platform.invokeMethod('requestPhonePermissions');
+          break;
+        case 'allFiles':
+          await platform.invokeMethod('requestAllFilesAccess');
+          break;
+        case 'callScreening':
+          await platform.invokeMethod('requestCallScreeningRole');
+          break;
       }
     } catch (e) {
-      debugPrint('Error fetching stats: $e');
+      debugPrint('Request permission error ($id): $e');
     }
-  }
-
-  Future<void> _requestPermission(String permissionId) async {
-    switch (permissionId) {
-      case 'phone':
-        await Permission.phone.request();
-        break;
-      case 'allFiles':
-        await Permission.manageExternalStorage.request();
-        break;
-      case 'callScreening':
-        try {
-          await platform.invokeMethod('requestCallScreeningRole');
-        } catch (e) {
-          debugPrint('Error requesting call screening role: $e');
-        }
-        break;
-    }
-    // Recheck all permissions after request
-    await _checkAllPermissions();
   }
 
   bool get _allPermissionsGranted =>
-      permissionStatus.values.every((granted) => granted);
+      permissionStatus.values.every((e) => e);
 
-  List<_PermissionItem> get _missingPermissions {
-    return allPermissions
-        .where((p) => !(permissionStatus[p.id] ?? false))
-        .toList();
-  }
+  List<_PermissionItem> get _missingPermissions =>
+      allPermissions
+          .where((p) => !(permissionStatus[p.id] ?? false))
+          .toList();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8FB),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16.0),
-                child: Text(
-                  'TỔNG QUAN',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Text(
+                'TỔNG QUAN',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
                 ),
               ),
-              // Stats Grid
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                children: [
-                  _buildStatCard(
-                    icon: Icons.shield_outlined,
-                    iconColor: Colors.red.shade400,
-                    label: 'Total number',
-                    value: totalNumbers.toString(),
-                  ),
-                  _buildStatCard(
-                    icon: Icons.auto_awesome_outlined,
-                    iconColor: Colors.blue.shade400,
-                    label: 'AI Accuracy',
-                    value: '80%',
-                  ),
-                  _buildStatCard(
-                    icon: Icons.call_outlined,
-                    iconColor: Colors.orange.shade400,
-                    label: 'Total calls',
-                    value: totalCalls.toString(),
-                  ),
-                  _buildStatCard(
-                    icon: Icons.flag_outlined,
-                    iconColor: Colors.red.shade600,
-                    label: 'Most Spams',
-                    value: 'Facebook',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              // Permissions Section
-              _buildPermissionSection(),
-            ],
-          ),
+            ),
+
+            /// 🔥 Realtime Firestore Stats
+            _buildStatsGridRealtime(),
+
+            const SizedBox(height: 32),
+
+            /// Permissions
+            _buildPermissionSection(),
+          ],
         ),
       ),
+    );
+  }
+
+  /// =========================
+  /// FIRESTORE REALTIME STATS
+  /// =========================
+  Widget _buildStatsGridRealtime() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('spam_numbers')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        final docs = snapshot.data!.docs;
+        int totalCalls = 0;
+
+        for (final doc in docs) {
+          totalCalls += (doc['call_count'] as int? ?? 0);
+        }
+
+        return GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          children: [
+            _buildStatCard(
+              icon: Icons.shield_outlined,
+              iconColor: Colors.red.shade400,
+              label: 'Total number',
+              value: docs.length.toString(),
+            ),
+            _buildStatCard(
+              icon: Icons.auto_awesome_outlined,
+              iconColor: Colors.blue.shade400,
+              label: 'AI Accuracy',
+              value: '80%',
+            ),
+            _buildStatCard(
+              icon: Icons.call_outlined,
+              iconColor: Colors.orange.shade400,
+              label: 'Total calls',
+              value: totalCalls.toString(),
+            ),
+            _buildStatCard(
+              icon: Icons.flag_outlined,
+              iconColor: Colors.red.shade600,
+              label: 'Most Spams',
+              value: 'Facebook',
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -230,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -241,13 +252,15 @@ class _HomeScreenState extends State<HomeScreen> {
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               label,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.black54,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -256,8 +269,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// =========================
+  /// PERMISSION SECTION
+  /// =========================
   Widget _buildPermissionSection() {
-    final missingPerms = _missingPermissions;
+    final missing = _missingPermissions;
 
     return Container(
       decoration: BoxDecoration(
@@ -267,81 +283,81 @@ class _HomeScreenState extends State<HomeScreen> {
           color: _allPermissionsGranted
               ? Colors.green.shade300
               : Colors.red.shade300,
-          width: 1,
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  _allPermissionsGranted
-                      ? Icons.check_circle_outline
-                      : Icons.cancel_outlined,
-                  size: 24,
-                  color: _allPermissionsGranted
-                      ? Colors.green
-                      : Colors.red.shade400,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _allPermissionsGranted
+                    ? Icons.check_circle_outline
+                    : Icons.cancel_outlined,
+                color: _allPermissionsGranted
+                    ? Colors.green
+                    : Colors.red.shade400,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                _allPermissionsGranted
+                    ? 'Permissions granted'
+                    : 'Permission missing',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  _allPermissionsGranted
-                      ? 'Permissions granted'
-                      : 'Permission missing',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: _allPermissionsGranted
-                        ? Colors.green.shade700
-                        : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            if (missingPerms.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              ...missingPerms.map((permItem) {
-                return _buildPermissionItem(
-                  title: permItem.title,
-                  icon: permItem.icon,
-                  onTap: () => _requestPermission(permItem.id),
-                );
-              }),
+              ),
             ],
+          ),
+          if (missing.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            ...missing.map(
+                  (p) => _buildPermissionItem(
+                title: p.title,
+                description: p.description,
+                icon: p.icon,
+                onTap: () => _requestPermission(p.id),
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildPermissionItem({
     required String title,
+    required String description,
     required IconData icon,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            Icon(icon, size: 20, color: Colors.black54),
+            const SizedBox(width: 12),
             Expanded(
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(icon, size: 20, color: Colors.black54),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.black.withValues(alpha: 0.5),
                     ),
                   ),
                 ],

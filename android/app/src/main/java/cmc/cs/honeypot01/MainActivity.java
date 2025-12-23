@@ -60,6 +60,28 @@ public class MainActivity extends FlutterActivity {
                                 result.success(true);
                             }
                             break;
+                        case "hasAllFilesAccess":
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                result.success(hasAllFilesAccess());
+                            } else {
+                                result.success(true); // Not needed for older versions
+                            }
+                            break;
+                        case "requestAllFilesAccess":
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                requestAllFilesAccess();
+                                result.success(null);
+                            } else {
+                                result.success(true);
+                            }
+                            break;
+                        case "hasPhonePermissions":
+                            result.success(hasDangerousPermissions());
+                            break;
+                        case "requestPhonePermissions":
+                            requestDangerousPermissions();
+                            result.success(null);
+                            break;
                         default:
                             result.notImplemented();
                             break;
@@ -96,33 +118,35 @@ public class MainActivity extends FlutterActivity {
 
     private void logAllPermissions() {
         Log.d(TAG, "=== PERMISSION STATUS ===");
-        Log.d(TAG, (hasPermission(Manifest.permission.READ_PHONE_STATE) ? "ok " : "miss ") + " READ_PHONE_STATE");
-        Log.d(TAG, (hasPermission(Manifest.permission.ANSWER_PHONE_CALLS) ? "ok " : "miss ") + " ANSWER_PHONE_CALLS");
+        Log.d(TAG, (hasPermission(Manifest.permission.READ_PHONE_STATE) ? "✓ " : "✗ ") + "READ_PHONE_STATE");
+        Log.d(TAG, (hasPermission(Manifest.permission.ANSWER_PHONE_CALLS) ? "✓ " : "✗ ") + "ANSWER_PHONE_CALLS");
+        Log.d(TAG, (hasPermission(Manifest.permission.READ_CALL_LOG) ? "✓ " : "✗ ") + "READ_CALL_LOG");
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Log.d(TAG, (hasPermission(Manifest.permission.READ_MEDIA_AUDIO) ? "ok " : "miss ") + " READ_MEDIA_AUDIO");
+            Log.d(TAG, (hasPermission(Manifest.permission.READ_MEDIA_AUDIO) ? "✓ " : "✗ ") + "READ_MEDIA_AUDIO");
         } else {
-            Log.d(TAG, (hasPermission(Manifest.permission.READ_EXTERNAL_STORAGE) ? "ok " : "miss ") + " READ_EXTERNAL_STORAGE");
+            Log.d(TAG, (hasPermission(Manifest.permission.READ_EXTERNAL_STORAGE) ? "✓ " : "✗ ") + "READ_EXTERNAL_STORAGE");
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Log.d(TAG, (hasAllFilesAccess() ? "ok " : "miss ") + " ALL_FILES_ACCESS");
+            Log.d(TAG, (hasAllFilesAccess() ? "✓ " : "✗ ") + "ALL_FILES_ACCESS");
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            Log.d(TAG, (hasCallScreeningRole() ? "ok " : "miss ") + " CALL_SCREENING_ROLE");
+            Log.d(TAG, (hasCallScreeningRole() ? "✓ " : "✗ ") + "CALL_SCREENING_ROLE");
         }
 
         Log.d(TAG, "========================");
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // DANGEROUS PERMISSIONS
+    // DANGEROUS PERMISSIONS (Phone)
     // ═══════════════════════════════════════════════════════════════════
 
     private boolean hasDangerousPermissions() {
         if (!hasPermission(Manifest.permission.READ_PHONE_STATE)) return false;
         if (!hasPermission(Manifest.permission.ANSWER_PHONE_CALLS)) return false;
+        if (!hasPermission(Manifest.permission.READ_CALL_LOG)) return false;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             return hasPermission(Manifest.permission.READ_MEDIA_AUDIO);
@@ -132,20 +156,21 @@ public class MainActivity extends FlutterActivity {
     }
 
     private void requestDangerousPermissions() {
-        Log.d(TAG, "Requesting dangerous permissions...");
+        Log.d(TAG, "📱 Requesting phone permissions...");
 
         String[] permissions;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions = new String[]{
                     Manifest.permission.READ_PHONE_STATE,
                     Manifest.permission.ANSWER_PHONE_CALLS,
-                    Manifest.permission.READ_MEDIA_AUDIO,
-                    Manifest.permission.READ_CALL_LOG
+                    Manifest.permission.READ_CALL_LOG,
+                    Manifest.permission.READ_MEDIA_AUDIO
             };
         } else {
             permissions = new String[]{
                     Manifest.permission.READ_PHONE_STATE,
                     Manifest.permission.ANSWER_PHONE_CALLS,
+                    Manifest.permission.READ_CALL_LOG,
                     Manifest.permission.READ_EXTERNAL_STORAGE
             };
         }
@@ -182,7 +207,7 @@ public class MainActivity extends FlutterActivity {
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // CALL SCREENING ROLE
+    // CALL SCREENING ROLE (Android 10+)
     // ═══════════════════════════════════════════════════════════════════
 
     @RequiresApi(api = Build.VERSION_CODES.Q)
@@ -207,7 +232,7 @@ public class MainActivity extends FlutterActivity {
     // ═══════════════════════════════════════════════════════════════════
 
     private void startService() {
-        Log.d(TAG, "ALL PERMISSIONS OK - Starting service...");
+        Log.d(TAG, "✅ ALL PERMISSIONS OK - Starting service...");
 
         Intent intent = new Intent(this, AutoReceiveSpamService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -233,15 +258,15 @@ public class MainActivity extends FlutterActivity {
             boolean allGranted = true;
             for (int i = 0; i < permissions.length; i++) {
                 boolean granted = grantResults[i] == PackageManager.PERMISSION_GRANTED;
-                Log.d(TAG, (granted ? "ok " : "miss ") + " " + permissions[i]);
+                Log.d(TAG, (granted ? "✓ " : "✗ ") + permissions[i]);
                 if (!granted) allGranted = false;
             }
 
             if (allGranted) {
-                Log.d(TAG, "All dangerous permissions granted");
+                Log.d(TAG, "✅ All phone permissions granted");
                 checkPermissions();
             } else {
-                Log.e(TAG, "Some permissions denied");
+                Log.e(TAG, "❌ Some permissions denied");
                 Toast.makeText(this, "App needs all permissions to work", Toast.LENGTH_LONG).show();
             }
         }
@@ -254,7 +279,7 @@ public class MainActivity extends FlutterActivity {
         if (requestCode == REQUEST_ALL_FILES_ACCESS) {
             handler.postDelayed(() -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && hasAllFilesAccess()) {
-                    Log.d(TAG, "All Files Access granted");
+                    Log.d(TAG, "✅ All Files Access granted");
                 } else {
                     Log.w(TAG, "⚠️ All Files Access not granted");
                 }
@@ -262,19 +287,21 @@ public class MainActivity extends FlutterActivity {
             }, 500);
 
         } else if (requestCode == REQUEST_CALL_SCREENING) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                boolean granted = hasCallScreeningRole();
-                if (granted) {
-                    Log.d(TAG, "Call Screening Role granted");
-                } else {
-                    Log.e(TAG, "Call Screening Role denied");
+            handler.postDelayed(() -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    boolean granted = hasCallScreeningRole();
+                    if (granted) {
+                        Log.d(TAG, "✅ Call Screening Role granted");
+                    } else {
+                        Log.e(TAG, "❌ Call Screening Role denied");
+                    }
+                    if (pendingResult != null) {
+                        pendingResult.success(granted);
+                        pendingResult = null;
+                    }
                 }
-                if (pendingResult != null) {
-                    pendingResult.success(granted);
-                    pendingResult = null;
-                }
-            }
-            checkPermissions();
+                checkPermissions();
+            }, 500);
         }
     }
 

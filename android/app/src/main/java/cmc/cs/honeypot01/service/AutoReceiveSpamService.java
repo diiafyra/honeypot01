@@ -25,7 +25,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 
-import cmc.cs.honeypot01.R;
+
 import cmc.cs.honeypot01.model.CallDetailsHolder;
 import cmc.cs.honeypot01.repository.CallDataManager;
 
@@ -265,7 +265,7 @@ public class AutoReceiveSpamService extends Service {
             notification = new Notification.Builder(this, channelId)
                     .setContentTitle("Honeypot đang hoạt động")
                     .setContentText("Đang theo dõi cuộc gọi đến")
-                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setSmallIcon(android.R.drawable.ic_menu_call)
                     .setOngoing(true)
                     .build();
         }

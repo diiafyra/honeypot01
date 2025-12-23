@@ -87,15 +87,16 @@ public class CallDataManager {
                 );
 
                 logRepo.save(log);
+                if(!(transcript == null || transcript.isEmpty())) {
+                    String history = logRepo.getConcatTranscript(call.getPhoneNumber());
+                    Log.d(TAG, "History: " + history);
 
-                String history = logRepo.getConcatTranscript(call.getPhoneNumber());
-                Log.d(TAG, "History: " + history);
+                    String label = GeminiClassifier.classifyConversation(history);
 
-                String label = GeminiClassifier.classifyConversation(history);
+                    spamRepo.updateLabel(call.getPhoneNumber(), label);
 
-                spamRepo.updateLabel(call.getPhoneNumber(), label);
-
-                Log.d(TAG, "Label = " + label);
+                    Log.d(TAG, "Label = " + label);
+                }
 
             } catch (Exception e) {
                 Log.e(TAG, "Process failed", e);
