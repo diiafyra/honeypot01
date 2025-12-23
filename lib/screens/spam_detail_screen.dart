@@ -258,9 +258,47 @@ class SpamDetailScreen extends StatelessWidget {
                       if (logs.isEmpty) {
                         return const Text('No call logs available');
                       }
+                      // Sort logs chronologically (oldest first)
+                      final sortedLogs = List.from(logs);
+                      sortedLogs.sort((a, b) {
+                        DateTime? timeA, timeB;
+                        final rawTsA =
+                            a['call_time'] ??
+                            a['timestamp'] ??
+                            a['time'] ??
+                            a['created_at'];
+                        final rawTsB =
+                            b['call_time'] ??
+                            b['timestamp'] ??
+                            b['time'] ??
+                            b['created_at'];
+
+                        if (rawTsA is Timestamp) {
+                          timeA = rawTsA.toDate();
+                        } else if (rawTsA is int) {
+                          timeA = DateTime.fromMillisecondsSinceEpoch(rawTsA);
+                        } else if (rawTsA is String) {
+                          try {
+                            timeA = DateTime.parse(rawTsA);
+                          } catch (_) {}
+                        }
+
+                        if (rawTsB is Timestamp) {
+                          timeB = rawTsB.toDate();
+                        } else if (rawTsB is int) {
+                          timeB = DateTime.fromMillisecondsSinceEpoch(rawTsB);
+                        } else if (rawTsB is String) {
+                          try {
+                            timeB = DateTime.parse(rawTsB);
+                          } catch (_) {}
+                        }
+
+                        if (timeA == null || timeB == null) return 0;
+                        return timeA.compareTo(timeB);
+                      });
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: logs.map((log) {
+                        children: sortedLogs.map((log) {
                           final data = log.data();
                           final transcript = data['transcript'] ?? '';
 

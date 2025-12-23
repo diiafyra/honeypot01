@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 import '../models/spam_item.dart';
 // add near other imports
 import 'spam_detail_screen.dart';
@@ -56,23 +55,6 @@ class _SpamListScreenState extends State<SpamListScreen> {
     return DateFormat('dd MMM yyyy').format(d);
   }
 
-  Future<void> _exportCsv(List<SpamItem> items) async {
-    if (items.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No items to export')));
-      return;
-    }
-    final header = 'phone,label,call_count,last_seen,caller_display_name';
-    final rows = items
-        .map(
-          (it) =>
-              '"${it.id}","${it.label}",${it.callCount},"${_formatDate(it.lastSeen)}","${it.callerDisplayName.replaceAll('"', '""')}"',
-        )
-        .join('\n');
-    await Share.share('$header\n$rows', subject: 'Spam numbers export');
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,23 +67,6 @@ class _SpamListScreenState extends State<SpamListScreen> {
           'Danh sách số spam',
           style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined, color: Colors.black87),
-            tooltip: 'Export visible',
-            onPressed: () async {
-              final snap = await FirebaseFirestore.instance
-                  .collection('spam_numbers')
-                  .orderBy('last_seen', descending: true)
-                  .get();
-              final items = _filterItems(
-                snap.docs.map((d) => SpamItem.fromDoc(d)).toList(),
-                _query,
-              );
-              await _exportCsv(items);
-            },
-          ),
-        ],
       ),
       body: Column(
         children: [

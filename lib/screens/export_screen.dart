@@ -209,6 +209,25 @@ class _ExportScreenState extends State<ExportScreen> {
             ],
           ),
           actions: [
+            TextButton.icon(
+              onPressed: () async {
+                try {
+                  await Share.shareXFiles([
+                    XFile(filePath),
+                  ], text: 'Spam numbers export');
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Cannot share file: $e')),
+                    );
+                  }
+                }
+              },
+              icon: const Icon(Icons.share_outlined),
+              label: const Text('Share'),
+              style: TextButton.styleFrom(foregroundColor: Colors.blue),
+            ),
+            const SizedBox(width: 8),
             ElevatedButton.icon(
               onPressed: () async {
                 try {
