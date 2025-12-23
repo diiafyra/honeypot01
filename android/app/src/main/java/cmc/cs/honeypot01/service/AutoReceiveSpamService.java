@@ -43,6 +43,9 @@ public class AutoReceiveSpamService extends Service {
     private CustomTelephonyCallback telephonyCallback;
     private CallDataManager callDataManager;
 
+    // NEW: Handler for delayed answering logic
+    private DelayedCallHandler delayedHandler;
+
     // Call details từ CallScreeningService
     private static CallDetailsHolder pendingCallDetails = null;
 
@@ -56,13 +59,21 @@ public class AutoReceiveSpamService extends Service {
         return null;
     }
 
+    // NEW: Static reference to service instance for receiver communication
+    private static AutoReceiveSpamService instance = null; // NEW: Static instance for receiver to call methods
+
     @Override
     public void onCreate() {
+        super.onCreate();
+        instance = this; // NEW: Set static instance
         super.onCreate();
         handler = new Handler(Looper.getMainLooper());
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         telecomManager = (TelecomManager) getSystemService(Context.TELECOM_SERVICE);
         callDataManager = new CallDataManager(this);
+
+        // NEW: Initialize delayed handler
+        delayedHandler = new DelayedCallHandler(this);
 
         registerPhoneStateListener();
         startAsForeground();
@@ -77,6 +88,47 @@ public class AutoReceiveSpamService extends Service {
     public static void setPendingCallDetails(CallDetailsHolder callDetails) {
         pendingCallDetails = callDetails;
         Log.d(TAG, "Pending call: " + callDetails.getPhoneNumber());
+    }
+
+    /**
+     * NEW: Get pending call details (for handler)
+     */
+    public CallDetailsHolder getPendingCallDetailsInstance() {
+        return pendingCallDetails;
+    }
+
+    /**
+     * NEW: Set pending call details (for handler)
+     */
+    public void setPendingCallDetailsInstance(CallDetailsHolder details) {
+        pendingCallDetails = details;
+    }
+
+    /**
+     * NEW: Get call data manager (for handler)
+     */
+    public CallDataManager getCallDataManager() {
+        return callDataManager;
+    }
+
+    /**
+     * NEW: Public method to answer call (for handler)
+     */
+    public void answerCallPublic() {
+        Log.d(TAG, "answerCallPublic called");
+        answerCall();
+    }
+
+    /**
+     * NEW: Start call processing (for handler)
+     */
+    public void startCall(CallDataManager cdm) {
+        if (!isCallActive && pendingCallDetails != null) {
+            isCallActive = true;
+            callStartTime = System.currentTimeMillis();
+            Log.d(TAG, "CALL STARTED: " + pendingCallDetails.getPhoneNumber());
+            cdm.onCallStarted(pendingCallDetails);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -154,27 +206,16 @@ public class AutoReceiveSpamService extends Service {
      * RINGING: Cuộc gọi đến → Tự động answer
      */
     private void handleRingingState() {
-        Log.d(TAG, "RINGING - Auto-answering...");
-        answerCall();
+        // NEW: Delegate to handler for delayed logic
+        delayedHandler.onRinging();
     }
 
     /**
      * OFFHOOK: Cuộc gọi đang active → Track call start
      */
     private void handleOffhookState() {
-        if (!isCallActive) {
-            if (pendingCallDetails == null) {
-                Log.w(TAG, "Pending call details missing (CallScreeningService didn't trigger?). Creating placeholder.");
-                pendingCallDetails = new CallDetailsHolder();
-                pendingCallDetails.setPhoneNumber("UNKNOWN_" + System.currentTimeMillis());
-            }
-
-            isCallActive = true;
-            callStartTime = System.currentTimeMillis();
-
-            Log.d(TAG, "CALL STARTED: " + pendingCallDetails.getPhoneNumber());
-            callDataManager.onCallStarted(pendingCallDetails);
-        }
+        // NEW: Delegate to handler
+        delayedHandler.onOffhook(callDataManager);
     }
 
     /**
@@ -198,7 +239,22 @@ public class AutoReceiveSpamService extends Service {
             // Reset
             pendingCallDetails = null;
             callStartTime = 0;
+            // NEW: Reset handler
+            delayedHandler.onIdle();
         }
+    }
+
+    // NEW: Static method for receiver to notify number received
+    public static void onNumberReceived(String number) {
+        if (instance != null) {
+            instance.onNumberReceivedInternal(number);
+        }
+    }
+
+    // NEW: Instance method
+    private void onNumberReceivedInternal(String number) {
+        // NEW: Delegate to handler
+        delayedHandler.onNumberReceived(number);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -206,14 +262,17 @@ public class AutoReceiveSpamService extends Service {
     // ═══════════════════════════════════════════════════════════════════
 
     private void answerCall() {
+        Log.d(TAG, "answerCall: Checking permissions");
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
                 != PackageManager.PERMISSION_GRANTED) {
             Log.e(TAG, "Missing ANSWER_PHONE_CALLS permission");
             return;
         }
 
+        Log.d(TAG, "answerCall: TelecomManager is " + (telecomManager != null ? "not null" : "null"));
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && telecomManager != null) {
+                Log.d(TAG, "answerCall: Calling acceptRingingCall");
                 telecomManager.acceptRingingCall();
                 Log.d(TAG, "Call answered via TelecomManager");
             } else {
@@ -222,6 +281,26 @@ public class AutoReceiveSpamService extends Service {
         } catch (Exception e) {
             Log.e(TAG, "Failed to answer call", e);
         }
+    }
+
+    // NEW: Combined method to answer call and start processing with number
+    private void answerAndStartCall(String phoneNumber) {
+        // Answer the call
+        answerCall();
+
+        // Set up call details
+        CallDetailsHolder holder = new CallDetailsHolder();
+        holder.setPhoneNumber(phoneNumber);
+        holder.setVerificationStatus("UNKNOWN");
+        holder.setHandlePresentation("ALLOWED");
+        holder.setCallerDisplayName(""); // Empty, as we don't have actual caller name
+        pendingCallDetails = holder;
+
+        // Start call processing
+        isCallActive = true;
+        callStartTime = System.currentTimeMillis();
+        Log.d(TAG, "CALL STARTED: " + phoneNumber);
+        callDataManager.onCallStarted(pendingCallDetails);
     }
 
     // ═══════════════════════════════════════════════════════════════════

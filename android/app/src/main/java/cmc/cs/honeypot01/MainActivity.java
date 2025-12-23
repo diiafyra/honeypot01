@@ -32,6 +32,10 @@ public class MainActivity extends FlutterActivity {
 
     // Request codes
     private static final int REQUEST_PERMISSIONS = 100;
+    private static final int REQUEST_READ_PHONE_STATE = 101;
+    private static final int REQUEST_ANSWER_PHONE_CALLS = 102;
+    private static final int REQUEST_READ_CALL_LOG = 103;
+    private static final int REQUEST_STORAGE_ACCESS = 104;
     private static final int REQUEST_CALL_SCREENING = 101;
     private static final int REQUEST_ALL_FILES_ACCESS = 102;
 
@@ -75,12 +79,50 @@ public class MainActivity extends FlutterActivity {
                                 result.success(true);
                             }
                             break;
-                        case "hasPhonePermissions":
-                            result.success(hasDangerousPermissions());
+                        case "hasReadPhoneState":
+                            result.success(hasPermission(Manifest.permission.READ_PHONE_STATE));
                             break;
-                        case "requestPhonePermissions":
-                            requestDangerousPermissions();
+                        case "requestReadPhoneState":
+                            requestPermission(Manifest.permission.READ_PHONE_STATE, REQUEST_READ_PHONE_STATE);
                             result.success(null);
+                            break;
+                        case "hasAnswerPhoneCalls":
+                            result.success(hasPermission(Manifest.permission.ANSWER_PHONE_CALLS));
+                            break;
+                        case "requestAnswerPhoneCalls":
+                            requestPermission(Manifest.permission.ANSWER_PHONE_CALLS, REQUEST_ANSWER_PHONE_CALLS);
+                            result.success(null);
+                            break;
+                        case "hasReadCallLog":
+                            result.success(hasPermission(Manifest.permission.READ_CALL_LOG));
+                            break;
+                        case "requestReadCallLog":
+                            requestPermission(Manifest.permission.READ_CALL_LOG, REQUEST_READ_CALL_LOG);
+                            result.success(null);
+                            break;
+                        case "hasStorageAccess":
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                result.success(hasPermission(Manifest.permission.READ_MEDIA_AUDIO));
+                            } else {
+                                result.success(hasPermission(Manifest.permission.READ_EXTERNAL_STORAGE));
+                            }
+                            break;
+                        case "requestStorageAccess":
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                requestPermission(Manifest.permission.READ_MEDIA_AUDIO, REQUEST_STORAGE_ACCESS);
+                            } else {
+                                requestPermission(Manifest.permission.READ_EXTERNAL_STORAGE, REQUEST_STORAGE_ACCESS);
+                            }
+                            result.success(null);
+                            break;
+                        case "forceCheckCallScreening":
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                boolean hasRole = hasCallScreeningRole();
+                                Log.d(TAG, "🔍 Force check Call Screening role: " + hasRole);
+                                result.success(hasRole);
+                            } else {
+                                result.success(true);
+                            }
                             break;
                         default:
                             result.notImplemented();
@@ -105,14 +147,12 @@ public class MainActivity extends FlutterActivity {
     private void checkPermissions() {
         logAllPermissions();
 
-        if (!hasDangerousPermissions()) {
-            requestDangerousPermissions();
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !hasAllFilesAccess()) {
-            requestAllFilesAccess();
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !hasCallScreeningRole()) {
-            requestCallScreeningRole();
-        } else {
+        if (hasDangerousPermissions() &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || hasAllFilesAccess()) &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || hasCallScreeningRole())) {
             startService();
+        } else {
+            Log.d(TAG, "Permissions not granted, waiting for user to grant via UI");
         }
     }
 
@@ -176,6 +216,11 @@ public class MainActivity extends FlutterActivity {
         }
 
         ActivityCompat.requestPermissions(this, permissions, REQUEST_PERMISSIONS);
+    }
+
+    private void requestPermission(String permission, int requestCode) {
+        Log.d(TAG, "📱 Requesting permission: " + permission);
+        ActivityCompat.requestPermissions(this, new String[]{permission}, requestCode);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -269,6 +314,14 @@ public class MainActivity extends FlutterActivity {
                 Log.e(TAG, "❌ Some permissions denied");
                 Toast.makeText(this, "App needs all permissions to work", Toast.LENGTH_LONG).show();
             }
+        } else if (requestCode == REQUEST_READ_PHONE_STATE ||
+                   requestCode == REQUEST_ANSWER_PHONE_CALLS ||
+                   requestCode == REQUEST_READ_CALL_LOG ||
+                   requestCode == REQUEST_STORAGE_ACCESS) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            Log.d(TAG, (granted ? "✓ " : "✗ ") + "Permission granted for request code: " + requestCode);
+            // Check if all permissions are now granted
+            handler.postDelayed(() -> checkPermissions(), 1000); // Delay to allow UI to update
         }
     }
 

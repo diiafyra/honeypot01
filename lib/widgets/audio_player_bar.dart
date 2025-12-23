@@ -63,7 +63,7 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
     if (_error != null) {
       return SizedBox(
         height: 64,
-        child: Center(child: Text('Audio error: $_error')),
+        child: Center(child: Text('Lỗi âm thanh: $_error')),
       );
     }
     return StreamBuilder<PlayerState>(

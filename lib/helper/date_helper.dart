@@ -2,5 +2,5 @@ import 'package:intl/intl.dart';
 
 String formatDate(int millis) {
   final date = DateTime.fromMillisecondsSinceEpoch(millis);
-  return DateFormat('dd MMM yyyy').format(date);
+  return DateFormat('dd/MM/yyyy').format(date);
 }

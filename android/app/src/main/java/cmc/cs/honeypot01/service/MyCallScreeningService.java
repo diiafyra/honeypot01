@@ -16,21 +16,46 @@ public class MyCallScreeningService extends CallScreeningService {
     private static final String TAG = "CallScreeningService";
 
     @Override
+    public void onCreate() {
+        super.onCreate();
+        Log.d(TAG, "🔥 CALL SCREENING SERVICE CREATED!");
+        Log.d(TAG, "Service is ready to screen calls");
+    }
+
+    @Override
     public void onScreenCall(@NonNull Call.Details callDetails) {
-        String phoneNumber = null;
+        Log.d(TAG, "🚨 CALL SCREENING SERVICE TRIGGERED!");
+        Log.d(TAG, "Call details received: " + callDetails.toString());
 
-        if (callDetails.getHandle() != null) {
-            phoneNumber = callDetails.getHandle().getSchemeSpecificPart();
-        }
+        // Respond immediately to avoid timeout on Samsung devices
+        CallResponse response = buildAllowResponse();
+        respondToCall(callDetails, response);
+        Log.d(TAG, "⚡ IMMEDIATE RESPONSE SENT");
 
-        if (phoneNumber == null || phoneNumber.isEmpty()) {
-            Log.w(TAG, "No phone number available");
-            respondToCall(callDetails, buildAllowResponse());
-            return;
-        }
+        // Process call details in background thread
+        new Thread(() -> processCallDetails(callDetails)).start();
+    }
 
-        CallDetailsHolder holder = new CallDetailsHolder();
-        holder.setPhoneNumber(phoneNumber);
+    private void processCallDetails(Call.Details callDetails) {
+        try {
+            String phoneNumber = null;
+
+            if (callDetails.getHandle() != null) {
+                phoneNumber = callDetails.getHandle().getSchemeSpecificPart();
+                Log.d(TAG, "Handle scheme: " + callDetails.getHandle().getScheme());
+                Log.d(TAG, "Phone number extracted: " + phoneNumber);
+            } else {
+                Log.w(TAG, "Call handle is null!");
+                return;
+            }
+
+            if (phoneNumber == null || phoneNumber.isEmpty()) {
+                Log.w(TAG, "No phone number available from CallScreeningService");
+                return;
+            }
+
+            CallDetailsHolder holder = new CallDetailsHolder();
+            holder.setPhoneNumber(phoneNumber);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             int verificationStatus = callDetails.getCallerNumberVerificationStatus();
@@ -89,16 +114,26 @@ public class MyCallScreeningService extends CallScreeningService {
             holder.setCallerDisplayName("UNKNOWN");
         }
 
-        // Log tổng hợp
-        Log.d(TAG, "Call Details Summary:");
-        Log.d(TAG, "   1. Number: " + phoneNumber);
-        Log.d(TAG, "   2. Verification: " + holder.getVerificationStatus());
-        Log.d(TAG, "   3. Presentation: " + holder.getHandlePresentation());
-        Log.d(TAG, "   4. Display Name: " + holder.getCallerDisplayName());
+            // Log tổng hợp
+            Log.d(TAG, "Call Details Summary:");
+            Log.d(TAG, "   1. Number: " + phoneNumber);
+            Log.d(TAG, "   2. Verification: " + holder.getVerificationStatus());
+            Log.d(TAG, "   3. Presentation: " + holder.getHandlePresentation());
+            Log.d(TAG, "   4. Display Name: " + holder.getCallerDisplayName());
 
-        AutoReceiveSpamService.setPendingCallDetails(holder);
+            // Set pending call details
+            AutoReceiveSpamService.setPendingCallDetails(holder);
+            Log.d(TAG, "✅ CallScreeningService set pending call details for: " + phoneNumber);
 
-        respondToCall(callDetails, buildAllowResponse());
+        } catch (Exception e) {
+            Log.e(TAG, "Error processing call details", e);
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "🛑 CallScreeningService destroyed");
     }
 
     private CallResponse buildAllowResponse() {

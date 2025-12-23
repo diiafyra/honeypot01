@@ -12,10 +12,7 @@ enum AIConfigTab { labels, keys }
 class AIConfigScreen extends StatefulWidget {
   final GlobalKey<NavigatorState> navKey;
 
-  const AIConfigScreen({
-    super.key,
-    required this.navKey,
-  });
+  const AIConfigScreen({super.key, required this.navKey});
 
   @override
   State<AIConfigScreen> createState() => _AIConfigScreenState();
@@ -63,9 +60,7 @@ class _AIConfigScreenState extends State<AIConfigScreen> {
         children: [
           _buildTabSelector(),
           const Divider(height: 1),
-          Expanded(
-            child: _buildTabContent(),
-          ),
+          Expanded(child: _buildTabContent()),
         ],
       ),
       floatingActionButton: _buildFloatingActionButton(),
@@ -81,10 +76,7 @@ class _AIConfigScreenState extends State<AIConfigScreen> {
       foregroundColor: Colors.black,
       title: const Text(
         'AI CONFIG',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-        ),
+        style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
       ),
       centerTitle: false,
     );
@@ -109,7 +101,7 @@ class _AIConfigScreenState extends State<AIConfigScreen> {
             color: Colors.grey[300],
           ),
           _buildTabButton(
-            label: 'API Keys',
+            label: 'Khóa API',
             tab: AIConfigTab.keys,
             icon: Icons.key,
           ),
@@ -155,13 +147,11 @@ class _AIConfigScreenState extends State<AIConfigScreen> {
     );
   }
 
-
   Widget _buildTabContent() {
     return _currentTab == AIConfigTab.labels
         ? const LabelList()
         : const AIKeyList();
   }
-
 
   Widget _buildFloatingActionButton() {
     return FloatingActionButton(
@@ -171,5 +161,4 @@ class _AIConfigScreenState extends State<AIConfigScreen> {
       child: const Icon(Icons.add),
     );
   }
-
 }

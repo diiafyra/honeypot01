@@ -110,7 +110,7 @@ class _SpamListScreenState extends State<SpamListScreen> {
 
   String _formatDate(DateTime d) {
     if (d.millisecondsSinceEpoch == 0) return '—';
-    return DateFormat('dd MMM yyyy').format(d);
+    return DateFormat('dd/MM/yyyy').format(d);
   }
 
   void _showFilterDialog() {
@@ -119,19 +119,19 @@ class _SpamListScreenState extends State<SpamListScreen> {
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(
           builder: (context, setStateDialog) => AlertDialog(
-            title: const Text('Filter by Date'),
+            title: const Text('Lọc theo ngày'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Filter type selection
                 const Text(
-                  'Filter by:',
+                  'Lọc theo:',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 RadioListTile<String>(
-                  title: const Text('Last Seen'),
+                  title: const Text('Lần thấy cuối'),
                   value: 'last_seen',
                   groupValue: _filterType,
                   onChanged: (value) {
@@ -139,7 +139,7 @@ class _SpamListScreenState extends State<SpamListScreen> {
                   },
                 ),
                 RadioListTile<String>(
-                  title: const Text('Created Date'),
+                  title: const Text('Ngày tạo'),
                   value: 'create_date',
                   groupValue: _filterType,
                   onChanged: (value) {
@@ -149,7 +149,7 @@ class _SpamListScreenState extends State<SpamListScreen> {
                 const SizedBox(height: 16),
                 // Start date
                 const Text(
-                  'Start Date:',
+                  'Ngày bắt đầu:',
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
@@ -173,8 +173,8 @@ class _SpamListScreenState extends State<SpamListScreen> {
                     ),
                     child: Text(
                       _filterStartDate == null
-                          ? 'Select start date'
-                          : DateFormat('dd MMM yyyy').format(_filterStartDate!),
+                          ? 'Chọn ngày bắt đầu'
+                          : DateFormat('dd/MM/yyyy').format(_filterStartDate!),
                       style: TextStyle(
                         color: _filterStartDate == null
                             ? Colors.black54
@@ -186,7 +186,7 @@ class _SpamListScreenState extends State<SpamListScreen> {
                 const SizedBox(height: 12),
                 // End date
                 const Text(
-                  'End Date:',
+                  'Ngày kết thúc:',
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
@@ -210,8 +210,8 @@ class _SpamListScreenState extends State<SpamListScreen> {
                     ),
                     child: Text(
                       _filterEndDate == null
-                          ? 'Select end date'
-                          : DateFormat('dd MMM yyyy').format(_filterEndDate!),
+                          ? 'Chọn ngày kết thúc'
+                          : DateFormat('dd/MM/yyyy').format(_filterEndDate!),
                       style: TextStyle(
                         color: _filterEndDate == null
                             ? Colors.black54
@@ -232,7 +232,7 @@ class _SpamListScreenState extends State<SpamListScreen> {
                   });
                   Navigator.pop(dialogContext);
                 },
-                child: const Text('Clear'),
+                child: const Text('Xóa'),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -243,7 +243,7 @@ class _SpamListScreenState extends State<SpamListScreen> {
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Apply'),
+                child: const Text('Áp dụng'),
               ),
             ],
           ),
@@ -267,6 +267,7 @@ class _SpamListScreenState extends State<SpamListScreen> {
       ),
       body: Column(
         children: [
+          /*
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
@@ -351,14 +352,13 @@ class _SpamListScreenState extends State<SpamListScreen> {
               ],
             ),
           ),
+          */
           Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: _stream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return const Center(
-                    child: Text('Error loading spam numbers'),
-                  );
+                  return const Center(child: Text('Lỗi tải danh sách số spam'));
                 }
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -392,7 +392,7 @@ class _SpamListScreenState extends State<SpamListScreen> {
                           if (docSnap == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Document not found'),
+                                content: Text('Không tìm thấy tài liệu'),
                               ),
                             );
                             return;
@@ -449,6 +449,7 @@ class _SpamListScreenState extends State<SpamListScreen> {
                                         ),
                                       ),
                                       const SizedBox(height: 4),
+                                      /*
                                       Text(
                                         'Phân loại: ${it.label}',
                                         style: const TextStyle(
@@ -456,6 +457,7 @@ class _SpamListScreenState extends State<SpamListScreen> {
                                           color: Colors.black87,
                                         ),
                                       ),
+                                      */
                                       // confidence removed per request
                                     ],
                                   ),

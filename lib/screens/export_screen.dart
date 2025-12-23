@@ -41,9 +41,9 @@ class _ExportScreenState extends State<ExportScreen> {
         if (!mounted) return;
 
         if (items.isEmpty) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('No items to export')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Không có mục nào để xuất')),
+          );
           setState(() => _isLoading = false);
           return;
         }
@@ -63,7 +63,7 @@ class _ExportScreenState extends State<ExportScreen> {
         if (latestMonthKey.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('No items with valid dates to export'),
+              content: Text('Không có mục nào có ngày hợp lệ để xuất'),
             ),
           );
           setState(() => _isLoading = false);
@@ -80,9 +80,9 @@ class _ExportScreenState extends State<ExportScreen> {
             .toList();
 
         if (latestMonthItems.isEmpty) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('No items to export')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Không có mục nào để xuất')),
+          );
           setState(() => _isLoading = false);
           return;
         }
@@ -111,9 +111,9 @@ class _ExportScreenState extends State<ExportScreen> {
         if (!mounted) return;
 
         if (items.isEmpty) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('No items to export')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Không có mục nào để xuất')),
+          );
           setState(() => _isLoading = false);
           return;
         }
@@ -143,7 +143,7 @@ class _ExportScreenState extends State<ExportScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error exporting: $e')));
+        ).showSnackBar(SnackBar(content: Text('Lỗi xuất dữ liệu: $e')));
       }
     } finally {
       if (mounted) {
@@ -168,7 +168,7 @@ class _ExportScreenState extends State<ExportScreen> {
 
       return file.path;
     } catch (e) {
-      throw 'Failed to save file: $e';
+      throw 'Không thể lưu tệp: $e';
     }
   }
 
@@ -178,13 +178,13 @@ class _ExportScreenState extends State<ExportScreen> {
       barrierDismissible: true,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Export'),
+          title: const Text('Xuất dữ liệu'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'File da được lưu tại đây',
+                'Tệp đã được lưu tại đây',
                 style: TextStyle(fontSize: 14, color: Colors.black87),
               ),
               const SizedBox(height: 12),
@@ -214,17 +214,17 @@ class _ExportScreenState extends State<ExportScreen> {
                 try {
                   await Share.shareXFiles([
                     XFile(filePath),
-                  ], text: 'Spam numbers export');
+                  ], text: 'Xuất dữ liệu số spam');
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Cannot share file: $e')),
+                      SnackBar(content: Text('Không thể chia sẻ tệp: $e')),
                     );
                   }
                 }
               },
               icon: const Icon(Icons.share_outlined),
-              label: const Text('Share'),
+              label: const Text('Chia sẻ'),
               style: TextButton.styleFrom(foregroundColor: Colors.blue),
             ),
             const SizedBox(width: 8),
@@ -233,18 +233,18 @@ class _ExportScreenState extends State<ExportScreen> {
                 try {
                   await Share.shareXFiles([
                     XFile(filePath),
-                  ], text: 'Spam numbers export');
+                  ], text: 'Xuất dữ liệu số spam');
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Cannot open file: $e')),
+                      SnackBar(content: Text('Không thể mở tệp: $e')),
                     );
                   }
                 }
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
               },
               icon: const Icon(Icons.folder_open),
-              label: const Text('Open'),
+              label: const Text('Mở'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
@@ -287,19 +287,19 @@ class _ExportScreenState extends State<ExportScreen> {
               _buildRadioOption(
                 value: 0,
                 title: 'Xuất toàn bộ số và phân loại',
-                description: 'Export all numbers with classification labels',
+                description: 'Xuất tất cả số điện thoại kèm nhãn phân loại',
               ),
               const SizedBox(height: 16),
               _buildRadioOption(
                 value: 1,
                 title: 'Xuất toàn bộ số',
-                description: 'Export phone numbers only',
+                description: 'Chỉ xuất số điện thoại',
               ),
               const SizedBox(height: 16),
               _buildRadioOption(
                 value: 2,
                 title: 'Xuất toàn bộ số và phân loại theo tháng',
-                description: 'Export numbers with labels from the latest month',
+                description: 'Xuất số điện thoại kèm nhãn từ tháng gần nhất',
               ),
               const SizedBox(height: 48),
               SizedBox(
@@ -326,7 +326,7 @@ class _ExportScreenState extends State<ExportScreen> {
                           ),
                         )
                       : const Text(
-                          'Export',
+                          'Xuất dữ liệu',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,

@@ -79,7 +79,7 @@ class SpamDetailScreen extends StatelessWidget {
 
   String _formatDate(DateTime d) {
     if (d.millisecondsSinceEpoch == 0) return '—';
-    return DateFormat('dd MMM yyyy').format(d);
+    return DateFormat('dd/MM/yyyy HH:mm:ss').format(d);
   }
 
   @override
@@ -135,7 +135,7 @@ class SpamDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Last call: ${_formatDate(item.lastSeen)}',
+                    'Cuộc gọi cuối: ${_formatDate(item.lastSeen)}',
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
@@ -172,7 +172,7 @@ class SpamDetailScreen extends StatelessWidget {
                       const Flexible(
                         flex: 3,
                         child: Text(
-                          'Verification status:',
+                          'Trạng thái xác minh:',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
@@ -190,7 +190,7 @@ class SpamDetailScreen extends StatelessWidget {
                       const Flexible(
                         flex: 3,
                         child: Text(
-                          'Handle Presentation:',
+                          'Cách hiển thị:',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
@@ -208,7 +208,7 @@ class SpamDetailScreen extends StatelessWidget {
                       const Flexible(
                         flex: 3,
                         child: Text(
-                          'Caller display name:',
+                          'Tên người gọi:',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
@@ -237,7 +237,7 @@ class SpamDetailScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'CALL LOGS',
+                    'NHẬT KÝ CUỘC GỌI',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -249,14 +249,14 @@ class SpamDetailScreen extends StatelessWidget {
                     stream: callLogsStream,
                     builder: (context, snapshot) {
                       if (snapshot.hasError) {
-                        return const Text('Error loading call logs');
+                        return const Text('Lỗi tải nhật ký cuộc gọi');
                       }
                       if (!snapshot.hasData) {
                         return const CircularProgressIndicator();
                       }
                       final logs = snapshot.data!.docs;
                       if (logs.isEmpty) {
-                        return const Text('No call logs available');
+                        return const Text('Không có nhật ký cuộc gọi');
                       }
                       // Sort logs from newest to oldest (descending)
                       final sortedLogs = List.from(logs);
@@ -334,7 +334,7 @@ class SpamDetailScreen extends StatelessWidget {
                           }
 
                           final timeStr = ts != null
-                              ? DateFormat('HH:mm:ss dd MMM yyyy').format(ts)
+                              ? DateFormat('HH:mm:ss dd/MM/yyyy').format(ts)
                               : '';
 
                           // resolve audio path (several possible field names)
@@ -417,7 +417,7 @@ class SpamDetailScreen extends StatelessWidget {
                                         if (resolved == null ||
                                             resolved.isEmpty) {
                                           return const Text(
-                                            'no file path found',
+                                            'không tìm thấy đường dẫn tệp',
                                             style: TextStyle(
                                               color: Colors.black54,
                                             ),
@@ -431,7 +431,7 @@ class SpamDetailScreen extends StatelessWidget {
                                     )
                                   else
                                     const Text(
-                                      'no file path found',
+                                      'không tìm thấy đường dẫn tệp',
                                       style: TextStyle(color: Colors.black54),
                                     ),
 

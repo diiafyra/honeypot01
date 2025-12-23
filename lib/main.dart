@@ -95,19 +95,19 @@ class _MyHomePageState extends State<MyHomePage> {
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
-              label: 'Home',
+              label: 'Trang chủ',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.list_alt),
-              label: 'Spam List',
+              label: 'Danh sách spam',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.smart_toy_outlined),
-              label: 'AI Config',
+              label: 'Cấu hình AI',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.upload_outlined),
-              label: 'Export',
+              label: 'Xuất dữ liệu',
             ),
           ],
         ),

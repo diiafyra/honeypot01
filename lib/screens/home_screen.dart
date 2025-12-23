@@ -24,35 +24,55 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with WidgetsBindingObserver {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   static const platform = MethodChannel('cmc.cs.honeypot01/permissions');
 
   /// Permission status
   Map<String, bool> permissionStatus = {
-    'phone': false,
+    'readPhoneState': false,
+    'answerPhoneCalls': false,
+    'readCallLog': false,
+    'storageAccess': false,
     'allFiles': false,
     'callScreening': false,
   };
 
   final List<_PermissionItem> allPermissions = [
     _PermissionItem(
-      id: 'phone',
-      title: 'Phone Permissions',
-      icon: Icons.call_outlined,
-      description: 'Read phone state, answer calls, call logs, storage',
+      id: 'readPhoneState',
+      title: 'Đọc trạng thái cuộc gọi',
+      icon: Icons.phone_android,
+      description: 'Cần thiết để theo dõi trạng thái cuộc gọi',
+    ),
+    _PermissionItem(
+      id: 'answerPhoneCalls',
+      title: 'Trả lời cuộc gọi',
+      icon: Icons.call,
+      description: 'Cần thiết để tự động trả lời cuộc gọi spam',
+    ),
+    _PermissionItem(
+      id: 'readCallLog',
+      title: 'Đọc nhật ký cuộc gọi',
+      icon: Icons.history,
+      description: 'Cần thiết để truy cập lịch sử cuộc gọi',
+    ),
+    _PermissionItem(
+      id: 'storageAccess',
+      title: 'Truy cập bộ nhớ',
+      icon: Icons.storage,
+      description: 'Cần thiết để lưu bản ghi cuộc gọi',
     ),
     _PermissionItem(
       id: 'allFiles',
-      title: 'All Files Access',
+      title: 'Truy cập tất cả tệp',
       icon: Icons.folder_open,
-      description: 'Required to read call recordings',
+      description: 'Cần thiết để đọc bản ghi cuộc gọi (Android 11+)',
     ),
     _PermissionItem(
       id: 'callScreening',
-      title: 'Default Caller ID & Spam App',
+      title: 'Ứng dụng ID người gọi và chống spam mặc định',
       icon: Icons.security,
-      description: 'Required to screen incoming calls',
+      description: 'Cần thiết để sàng lọc cuộc gọi đến',
     ),
   ];
 
@@ -79,18 +99,27 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _checkAllPermissions() async {
     try {
-      final phoneGranted =
-          await platform.invokeMethod<bool>('hasPhonePermissions') ?? false;
+      final readPhoneStateGranted =
+          await platform.invokeMethod<bool>('hasReadPhoneState') ?? false;
+      final answerPhoneCallsGranted =
+          await platform.invokeMethod<bool>('hasAnswerPhoneCalls') ?? false;
+      final readCallLogGranted =
+          await platform.invokeMethod<bool>('hasReadCallLog') ?? false;
+      final storageAccessGranted =
+          await platform.invokeMethod<bool>('hasStorageAccess') ?? false;
       final allFilesGranted =
           await platform.invokeMethod<bool>('hasAllFilesAccess') ?? false;
       final callScreeningGranted =
-          await platform.invokeMethod<bool>('hasCallScreeningRole') ?? false;
+          await platform.invokeMethod<bool>('forceCheckCallScreening') ?? false;
 
       if (!mounted) return;
 
       setState(() {
         permissionStatus = {
-          'phone': phoneGranted,
+          'readPhoneState': readPhoneStateGranted,
+          'answerPhoneCalls': answerPhoneCallsGranted,
+          'readCallLog': readCallLogGranted,
+          'storageAccess': storageAccessGranted,
           'allFiles': allFilesGranted,
           'callScreening': callScreeningGranted,
         };
@@ -103,8 +132,17 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _requestPermission(String id) async {
     try {
       switch (id) {
-        case 'phone':
-          await platform.invokeMethod('requestPhonePermissions');
+        case 'readPhoneState':
+          await platform.invokeMethod('requestReadPhoneState');
+          break;
+        case 'answerPhoneCalls':
+          await platform.invokeMethod('requestAnswerPhoneCalls');
+          break;
+        case 'readCallLog':
+          await platform.invokeMethod('requestReadCallLog');
+          break;
+        case 'storageAccess':
+          await platform.invokeMethod('requestStorageAccess');
           break;
         case 'allFiles':
           await platform.invokeMethod('requestAllFilesAccess');
@@ -118,13 +156,10 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  bool get _allPermissionsGranted =>
-      permissionStatus.values.every((e) => e);
+  bool get _allPermissionsGranted => permissionStatus.values.every((e) => e);
 
   List<_PermissionItem> get _missingPermissions =>
-      allPermissions
-          .where((p) => !(permissionStatus[p.id] ?? false))
-          .toList();
+      allPermissions.where((p) => !(permissionStatus[p.id] ?? false)).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -165,9 +200,7 @@ class _HomeScreenState extends State<HomeScreen>
   /// =========================
   Widget _buildStatsGridRealtime() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('spam_numbers')
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('spam_numbers').snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(
@@ -195,25 +228,25 @@ class _HomeScreenState extends State<HomeScreen>
             _buildStatCard(
               icon: Icons.shield_outlined,
               iconColor: Colors.red.shade400,
-              label: 'Total number',
+              label: 'Tổng số',
               value: docs.length.toString(),
             ),
             _buildStatCard(
               icon: Icons.auto_awesome_outlined,
               iconColor: Colors.blue.shade400,
-              label: 'AI Accuracy',
+              label: 'Độ chính xác AI',
               value: '80%',
             ),
             _buildStatCard(
               icon: Icons.call_outlined,
               iconColor: Colors.orange.shade400,
-              label: 'Total calls',
+              label: 'Tổng cuộc gọi',
               value: totalCalls.toString(),
             ),
             _buildStatCard(
               icon: Icons.flag_outlined,
               iconColor: Colors.red.shade600,
-              label: 'Most Spams',
+              label: 'Spam nhiều nhất',
               value: 'Facebook',
             ),
           ],
@@ -249,18 +282,12 @@ class _HomeScreenState extends State<HomeScreen>
             const SizedBox(height: 12),
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
               label,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black54,
-              ),
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
               textAlign: TextAlign.center,
             ),
           ],
@@ -300,21 +327,27 @@ class _HomeScreenState extends State<HomeScreen>
                     : Colors.red.shade400,
               ),
               const SizedBox(width: 12),
-              Text(
-                _allPermissionsGranted
-                    ? 'Permissions granted'
-                    : 'Permission missing',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  _allPermissionsGranted ? 'Đã cấp quyền' : 'Thiếu quyền',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+              ),
+              IconButton(
+                onPressed: _checkAllPermissions,
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Force refresh permissions',
+                color: Colors.blue.shade400,
               ),
             ],
           ),
           if (missing.isNotEmpty) ...[
             const SizedBox(height: 16),
             ...missing.map(
-                  (p) => _buildPermissionItem(
+              (p) => _buildPermissionItem(
                 title: p.title,
                 description: p.description,
                 icon: p.icon,
