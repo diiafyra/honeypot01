@@ -258,7 +258,7 @@ class SpamDetailScreen extends StatelessWidget {
                       if (logs.isEmpty) {
                         return const Text('No call logs available');
                       }
-                      // Sort logs chronologically (oldest first)
+                      // Sort logs from newest to oldest (descending)
                       final sortedLogs = List.from(logs);
                       sortedLogs.sort((a, b) {
                         DateTime? timeA, timeB;
@@ -294,7 +294,7 @@ class SpamDetailScreen extends StatelessWidget {
                         }
 
                         if (timeA == null || timeB == null) return 0;
-                        return timeA.compareTo(timeB);
+                        return timeB.compareTo(timeA); // Newest first
                       });
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

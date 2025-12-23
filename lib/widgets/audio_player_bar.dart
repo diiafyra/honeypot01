@@ -3,7 +3,8 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 
 class AudioPlayerBar extends StatefulWidget {
-  final String source; // http(s) url, gs:// url, storage path or local file path
+  final String
+  source; // http(s) url, gs:// url, storage path or local file path
   final bool isLocal;
   const AudioPlayerBar({super.key, required this.source, this.isLocal = false});
 
@@ -94,8 +95,12 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
                         stream: _player.durationStream,
                         builder: (context, durSnap) {
                           final dur = durSnap.data ?? Duration.zero;
-                          final maxMs = dur.inMilliseconds > 0 ? dur.inMilliseconds : 1;
-                          final value = pos.inMilliseconds.clamp(0, maxMs).toDouble();
+                          final maxMs = dur.inMilliseconds > 0
+                              ? dur.inMilliseconds
+                              : 1;
+                          final value = pos.inMilliseconds
+                              .clamp(0, maxMs)
+                              .toDouble();
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -105,27 +110,30 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
                                 value: value,
                                 onChanged: dur == Duration.zero
                                     ? null
-                                    : (v) => _player.seek(Duration(milliseconds: v.toInt())),
+                                    : (v) => _player.seek(
+                                        Duration(milliseconds: v.toInt()),
+                                      ),
                               ),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(_fmt(pos), style: const TextStyle(fontSize: 12)),
-                                  Text(_fmt(dur), style: const TextStyle(fontSize: 12)),
+                                  Text(
+                                    _fmt(pos),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  Text(
+                                    _fmt(dur),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
                                 ],
-                              )
+                              ),
                             ],
                           );
                         },
                       );
                     },
                   ),
-                ),
-                PopupMenuButton<String>(
-                  onSelected: (_) {},
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'info', child: Text('Info')),
-                  ],
                 ),
               ],
             ),
