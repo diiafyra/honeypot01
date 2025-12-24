@@ -75,7 +75,7 @@ class _AIConfigScreenState extends State<AIConfigScreen> {
       backgroundColor: Colors.white,
       foregroundColor: Colors.black,
       title: const Text(
-        'AI CONFIG',
+        'GEMINI',
         style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
       ),
       centerTitle: false,

@@ -269,7 +269,7 @@ class _ExportScreenState extends State<ExportScreen> {
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.0),
                 child: Text(
-                  'EXPORT',
+                  'XUẤT DỮ LIỆU',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,

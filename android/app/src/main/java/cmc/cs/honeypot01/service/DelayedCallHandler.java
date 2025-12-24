@@ -29,7 +29,12 @@ public class DelayedCallHandler {
         Log.d(TAG, "PendingCallDetails: " + (service.getPendingCallDetailsInstance() != null ? "AVAILABLE" : "NULL"));
         Log.d(TAG, "PendingNumber: " + (pendingNumber != null ? pendingNumber : "NULL"));
 
-        if (pendingNumber != null) {
+        if (service.getPendingCallDetailsInstance() != null && service.getPendingCallDetailsInstance().getPhoneNumber() != null) {
+            // CallScreeningService provided number, answer immediately
+            pendingNumber = service.getPendingCallDetailsInstance().getPhoneNumber();
+            Log.d(TAG, "Using CallScreeningService number: " + pendingNumber);
+            answerAndStartCall();
+        } else if (pendingNumber != null) {
             // Broadcast provided number, answer now
             Log.d(TAG, "Using broadcast path - answering with number: " + pendingNumber);
             answerAndStartCall();
@@ -59,9 +64,13 @@ public class DelayedCallHandler {
             service.setPendingCallDetailsInstance(holder);
             Log.d(TAG, "Created new CallDetailsHolder for broadcast number");
         } else {
-            // Update the number from broadcast (more reliable)
-            service.getPendingCallDetailsInstance().setPhoneNumber(number);
-            Log.d(TAG, "Updated phone number in existing CallDetailsHolder");
+            // Update the number from broadcast (more reliable) only if not already set
+            if (service.getPendingCallDetailsInstance().getPhoneNumber() == null) {
+                service.getPendingCallDetailsInstance().setPhoneNumber(number);
+                Log.d(TAG, "Updated phone number in existing CallDetailsHolder");
+            } else {
+                Log.d(TAG, "Phone number already set by CallScreeningService, skipping update");
+            }
         }
 
         if (isRinging) {

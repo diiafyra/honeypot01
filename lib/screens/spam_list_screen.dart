@@ -261,7 +261,7 @@ class _SpamListScreenState extends State<SpamListScreen> {
         elevation: 0.5,
         titleSpacing: 16,
         title: const Text(
-          'Danh sách số spam',
+          'DANH SÁCH SỐ SPAM',
           style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87),
         ),
       ),
