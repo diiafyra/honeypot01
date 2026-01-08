@@ -41,6 +41,7 @@ dependencies {
     implementation(files("libs/sherpa-onnx-1.12.19.aar"))
     implementation("com.google.code.gson:gson:2.13.2")
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
+    implementation("com.karumi:dexter:6.2.3")
 }
 
 flutter {

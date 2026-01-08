@@ -5,17 +5,25 @@ public class CallDetailsHolder {
     private String verificationStatus;
     private String handlePresentation;
     private String callerDisplayName;
+    private String simSlotInfo;
+    private int subscriptionId;
+
     public CallDetailsHolder() {
         this.verificationStatus = "NOT_VERIFIED";
-        this.handlePresentation = "UNKNOWN"; // ← Đổi tên
+        this.handlePresentation = "UNKNOWN";
         this.callerDisplayName = "";
+        this.simSlotInfo = "UNKNOWN";
+        this.subscriptionId = -1;
     }
 
-    public CallDetailsHolder(String phoneNumber, String verificationStatus, String handlePresentation, String callerDisplayName) {
+    public CallDetailsHolder(String phoneNumber, String verificationStatus,
+                             String handlePresentation, String callerDisplayName) {
         this.phoneNumber = phoneNumber;
         this.verificationStatus = verificationStatus;
-        this.handlePresentation = handlePresentation; // ← Đổi tên
+        this.handlePresentation = handlePresentation;
         this.callerDisplayName = callerDisplayName;
+        this.simSlotInfo = "UNKNOWN";
+        this.subscriptionId = -1;
     }
 
     // Getters and Setters
@@ -27,8 +35,8 @@ public class CallDetailsHolder {
         this.verificationStatus = verificationStatus;
     }
 
-    public String getHandlePresentation() { return handlePresentation; } // ← Đổi tên
-    public void setHandlePresentation(String handlePresentation) { // ← Đổi tên
+    public String getHandlePresentation() { return handlePresentation; }
+    public void setHandlePresentation(String handlePresentation) {
         this.handlePresentation = handlePresentation;
     }
 
@@ -36,4 +44,11 @@ public class CallDetailsHolder {
     public void setCallerDisplayName(String callerDisplayName) {
         this.callerDisplayName = callerDisplayName;
     }
+
+    // ← GETTERS/SETTERS MỚI
+    public String getSimSlotInfo() { return simSlotInfo; }
+    public void setSimSlotInfo(String simSlotInfo) { this.simSlotInfo = simSlotInfo; }
+
+    public int getSubscriptionId() { return subscriptionId; }
+    public void setSubscriptionId(int subscriptionId) { this.subscriptionId = subscriptionId; }
 }

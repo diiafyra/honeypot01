@@ -6,9 +6,10 @@ import android.content.Intent;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
-import cmc.cs.honeypot01.model.CallDetailsHolder;
-import cmc.cs.honeypot01.service.AutoReceiveSpamService;
-
+/**
+ * BroadcastReceiver để bắt incoming call từ system
+ * Dùng làm fallback nếu CallScreeningService không hoạt động
+ */
 public class CallStateReceiver extends BroadcastReceiver {
     private static final String TAG = "CallStateReceiver";
 
@@ -18,7 +19,7 @@ public class CallStateReceiver extends BroadcastReceiver {
         Log.d(TAG, "📡 Broadcast received: " + action);
 
         if (Intent.ACTION_NEW_OUTGOING_CALL.equals(action)) {
-            // Outgoing call
+            // Outgoing call - ignore
             String phoneNumber = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER);
             Log.d(TAG, "📞 Outgoing call to: " + phoneNumber);
             return;
@@ -28,24 +29,33 @@ public class CallStateReceiver extends BroadcastReceiver {
             String state = intent.getStringExtra(TelephonyManager.EXTRA_STATE);
             String phoneNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER);
 
-            Log.d(TAG, "📞 Phone state changed: " + state + ", number: " + phoneNumber);
+            Log.d(TAG, "📞 Phone state: " + state + ", number: " + phoneNumber);
 
-            if (TelephonyManager.EXTRA_STATE_RINGING.equals(state) && phoneNumber != null && !phoneNumber.isEmpty()) {
-                Log.d(TAG, "🔔 RINGING - Phone number from broadcast: " + phoneNumber);
+            if (TelephonyManager.EXTRA_STATE_RINGING.equals(state) &&
+                    phoneNumber != null && !phoneNumber.isEmpty()) {
 
-                // Create call details holder as backup
-                CallDetailsHolder holder = new CallDetailsHolder();
-                holder.setPhoneNumber(phoneNumber);
-                holder.setVerificationStatus("UNKNOWN");
-                holder.setHandlePresentation("ALLOWED");
-                holder.setCallerDisplayName("");
+                Log.d(TAG, "🔔 RINGING - Sending number via broadcast: " + phoneNumber);
 
-                // Set as pending call details
-                AutoReceiveSpamService.setPendingCallDetails(holder);
-                // NEW: Notify service that number is received
-                AutoReceiveSpamService.onNumberReceived(phoneNumber);
-                Log.d(TAG, "✅ Backup call details set from broadcast receiver: " + phoneNumber);
+                // Gửi call details qua broadcast (như CallScreeningService)
+                sendCallDetailsBroadcast(context, phoneNumber);
+
+                Log.d(TAG, "✅ Broadcast sent from CallStateReceiver: " + phoneNumber);
             }
         }
+    }
+
+    /**
+     * Gửi call details qua broadcast để AutoReceiveSpamService nhận
+     * Dùng cùng format với CallScreeningService
+     */
+    private void sendCallDetailsBroadcast(Context context, String phoneNumber) {
+        Intent broadcastIntent = new Intent("cmc.cs.honeypot01.CALL_DETAILS");
+        broadcastIntent.putExtra("phone_number", phoneNumber);
+        broadcastIntent.putExtra("verification_status", "UNKNOWN");
+        broadcastIntent.putExtra("handle_presentation", "ALLOWED");
+        broadcastIntent.putExtra("caller_display_name", "");
+
+        context.sendBroadcast(broadcastIntent);
+        Log.d(TAG, "Call details broadcast sent");
     }
 }

@@ -7,8 +7,10 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
@@ -16,6 +18,8 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.telecom.TelecomManager;
 import android.telephony.PhoneStateListener;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyCallback;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -25,9 +29,9 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 
-
 import cmc.cs.honeypot01.model.CallDetailsHolder;
 import cmc.cs.honeypot01.repository.CallDataManager;
+import cmc.cs.honeypot01.helper.ReceiverInfoExtractor;
 
 import java.util.concurrent.Executor;
 
@@ -42,16 +46,14 @@ public class AutoReceiveSpamService extends Service {
     private PhoneStateListener phoneStateListener;
     private CustomTelephonyCallback telephonyCallback;
     private CallDataManager callDataManager;
+    private ReceiverInfoExtractor receiverInfoExtractor;
 
-    // NEW: Handler for delayed answering logic
-    private DelayedCallHandler delayedHandler;
-
-    // Call details từ CallScreeningService
-    private static CallDetailsHolder pendingCallDetails = null;
-
-    // Call tracking
-    private long callStartTime = 0;
+    // Call state
+    private CallDetailsHolder pendingCallDetails = null;
+    private String pendingNumberFromBroadcast = null;
+    private boolean isRinging = false;
     private boolean isCallActive = false;
+    private long callStartTime = 0;
 
     @Nullable
     @Override
@@ -59,75 +61,130 @@ public class AutoReceiveSpamService extends Service {
         return null;
     }
 
-    // NEW: Static reference to service instance for receiver communication
-    private static AutoReceiveSpamService instance = null; // NEW: Static instance for receiver to call methods
-
     @Override
     public void onCreate() {
-        super.onCreate();
-        instance = this; // NEW: Set static instance
         super.onCreate();
         handler = new Handler(Looper.getMainLooper());
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         telecomManager = (TelecomManager) getSystemService(Context.TELECOM_SERVICE);
         callDataManager = new CallDataManager(this);
-
-        // NEW: Initialize delayed handler
-        delayedHandler = new DelayedCallHandler(this);
+        receiverInfoExtractor = ReceiverInfoExtractor.create(this);
 
         registerPhoneStateListener();
+        registerNumberReceiver();
         startAsForeground();
 
         Log.d(TAG, "Service Created");
-    }
-
-
-    /**
-     * Set call details từ CallScreeningService
-     */
-    public static void setPendingCallDetails(CallDetailsHolder callDetails) {
-        pendingCallDetails = callDetails;
-        Log.d(TAG, "Pending call: " + callDetails.getPhoneNumber());
+        logReceiverInfo();
     }
 
     /**
-     * NEW: Get pending call details (for handler)
+     * Log thông tin receiver khi service khởi động
      */
-    public CallDetailsHolder getPendingCallDetailsInstance() {
-        return pendingCallDetails;
+    private void logReceiverInfo() {
+        String receiverNumber = receiverInfoExtractor.getReceiverNumber();
+        Integer subscriptionId = receiverInfoExtractor.getSubscriptionId();
+
+        Log.d(TAG, "=== RECEIVER INFO ===");
+        Log.d(TAG, "Receiver Number: " + (receiverNumber != null ? receiverNumber : "N/A"));
+        Log.d(TAG, "Subscription ID: " + (subscriptionId != null ? subscriptionId : "N/A"));
+        Log.d(TAG, "====================");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // BROADCAST RECEIVERS
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Receiver cho số điện thoại từ nguồn khác (fallback)
+     */
+    private BroadcastReceiver numberReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String number = intent.getStringExtra("phone_number");
+            if (number != null) {
+                onNumberReceived(number);
+            }
+        }
+    };
+
+    /**
+     * Receiver cho call details từ CallScreeningService (primary)
+     */
+    private BroadcastReceiver callDetailsReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String phoneNumber = intent.getStringExtra("phone_number");
+            String verificationStatus = intent.getStringExtra("verification_status");
+            String handlePresentation = intent.getStringExtra("handle_presentation");
+            String callerDisplayName = intent.getStringExtra("caller_display_name");
+            String simSlotInfo = intent.getStringExtra("sim_slot_info");
+            int subscriptionId = intent.getIntExtra("subscription_id", -1);
+
+            if (phoneNumber != null) {
+                onCallDetailsReceived(phoneNumber, verificationStatus,
+                        handlePresentation, callerDisplayName,
+                        simSlotInfo, subscriptionId);
+            }
+        }
+    };
+
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private void registerNumberReceiver() {
+        IntentFilter numberFilter = new IntentFilter("cmc.cs.honeypot01.PHONE_NUMBER");
+        IntentFilter detailsFilter = new IntentFilter("cmc.cs.honeypot01.CALL_DETAILS");
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(numberReceiver, numberFilter, Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(callDetailsReceiver, detailsFilter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(numberReceiver, numberFilter);
+            registerReceiver(callDetailsReceiver, detailsFilter);
+        }
+
+        Log.d(TAG, "Receivers registered");
+    }
+
+    private void onNumberReceived(String number) {
+        Log.d(TAG, "Number received from broadcast: " + number);
+        pendingNumberFromBroadcast = number;
+
+        // Create CallDetailsHolder if not exists
+        if (pendingCallDetails == null) {
+            pendingCallDetails = new CallDetailsHolder();
+            pendingCallDetails.setPhoneNumber(number);
+            pendingCallDetails.setVerificationStatus("UNKNOWN");
+            pendingCallDetails.setHandlePresentation("ALLOWED");
+            pendingCallDetails.setCallerDisplayName("");
+        }
+
+        // Answer if already ringing
+        if (isRinging) {
+            answerCall();
+        }
     }
 
     /**
-     * NEW: Set pending call details (for handler)
+     * Nhận call details đầy đủ từ CallScreeningService
      */
-    public void setPendingCallDetailsInstance(CallDetailsHolder details) {
-        pendingCallDetails = details;
-    }
+    private void onCallDetailsReceived(String phoneNumber, String verificationStatus,
+                                       String handlePresentation, String callerDisplayName,
+                                       String simSlotInfo, int subscriptionId) {
+        Log.d(TAG, "Call details received from CallScreeningService");
+        Log.d(TAG, "Number: " + phoneNumber);
+        Log.d(TAG, "📱 SIM: " + simSlotInfo + " (SubID: " + subscriptionId + ")");
 
-    /**
-     * NEW: Get call data manager (for handler)
-     */
-    public CallDataManager getCallDataManager() {
-        return callDataManager;
-    }
+        pendingCallDetails = new CallDetailsHolder();
+        pendingCallDetails.setPhoneNumber(phoneNumber);
+        pendingCallDetails.setVerificationStatus(verificationStatus != null ? verificationStatus : "UNKNOWN");
+        pendingCallDetails.setHandlePresentation(handlePresentation != null ? handlePresentation : "ALLOWED");
+        pendingCallDetails.setCallerDisplayName(callerDisplayName != null ? callerDisplayName : "");
+        pendingCallDetails.setSimSlotInfo(simSlotInfo != null ? simSlotInfo : "UNKNOWN");
+        pendingCallDetails.setSubscriptionId(subscriptionId);
 
-    /**
-     * NEW: Public method to answer call (for handler)
-     */
-    public void answerCallPublic() {
-        Log.d(TAG, "answerCallPublic called");
-        answerCall();
-    }
-
-    /**
-     * NEW: Start call processing (for handler)
-     */
-    public void startCall(CallDataManager cdm) {
-        if (!isCallActive && pendingCallDetails != null) {
-            isCallActive = true;
-            callStartTime = System.currentTimeMillis();
-            Log.d(TAG, "CALL STARTED: " + pendingCallDetails.getPhoneNumber());
-            cdm.onCallStarted(pendingCallDetails);
+        // Answer if already ringing
+        if (isRinging) {
+            answerCall();
         }
     }
 
@@ -162,7 +219,7 @@ public class AutoReceiveSpamService extends Service {
         phoneStateListener = new PhoneStateListener() {
             @Override
             public void onCallStateChanged(int state, String phoneNumber) {
-                // Android < 12: tạo CallDetailsHolder nếu chưa có
+                // Android < 12: create CallDetailsHolder if needed
                 if (phoneNumber != null && !phoneNumber.isEmpty() && pendingCallDetails == null) {
                     pendingCallDetails = new CallDetailsHolder();
                     pendingCallDetails.setPhoneNumber(phoneNumber);
@@ -175,7 +232,8 @@ public class AutoReceiveSpamService extends Service {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.S)
-    private class CustomTelephonyCallback extends TelephonyCallback implements TelephonyCallback.CallStateListener {
+    private class CustomTelephonyCallback extends TelephonyCallback
+            implements TelephonyCallback.CallStateListener {
         @Override
         public void onCallStateChanged(int state) {
             handleCallStateChange(state);
@@ -202,25 +260,107 @@ public class AutoReceiveSpamService extends Service {
         }
     }
 
-    /**
-     * RINGING: Cuộc gọi đến → Tự động answer
-     */
     private void handleRingingState() {
-        // NEW: Delegate to handler for delayed logic
-        delayedHandler.onRinging();
-    }
+        isRinging = true;
+        Log.d(TAG, "RINGING - Checking for number...");
 
-    /**
-     * OFFHOOK: Cuộc gọi đang active → Track call start
-     */
+        // LẤY SIM INFO KHI ĐANG RINGING
+        String simSlotInfo = "UNKNOWN";
+        int subscriptionId = -1;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+            try {
+                // Lấy subscription ID của cuộc gọi đang ringing
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+                        == PackageManager.PERMISSION_GRANTED) {
+
+                    // Cách 1: Từ TelephonyManager (Android 12+)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        // Android 12+ có API mới
+                        subscriptionId = telephonyManager.getSubscriptionId();
+                        Log.d(TAG, "📱 SubID from TelephonyManager (API 31+): " + subscriptionId);
+                    }
+
+                    // Cách 2: Từ SubscriptionManager
+                    if (subscriptionId == -1) {
+                        SubscriptionManager subManager = (SubscriptionManager)
+                                getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+                        if (subManager != null) {
+                            subscriptionId = SubscriptionManager.getDefaultVoiceSubscriptionId();
+                            Log.d(TAG, "📱 SubID from SubscriptionManager: " + subscriptionId);
+                        }
+                    }
+
+                    // Lấy thông tin SIM từ subscription ID
+                    if (subscriptionId != -1) {
+                        SubscriptionManager subManager = (SubscriptionManager)
+                                getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+                        if (subManager != null) {
+                            SubscriptionInfo info = subManager.getActiveSubscriptionInfo(subscriptionId);
+                            if (info != null) {
+                                int slotIndex = info.getSimSlotIndex();
+                                String carrierName = info.getCarrierName() != null
+                                        ? info.getCarrierName().toString()
+                                        : "Unknown";
+                                simSlotInfo = "SIM_" + (slotIndex + 1) + "_" + carrierName;
+                                Log.d(TAG, "📱 SIM Info: " + simSlotInfo);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error getting SIM info", e);
+            }
+        }
+
+        // Priority: CallScreeningService > Broadcast > Wait
+        String number = null;
+        if (pendingCallDetails != null && pendingCallDetails.getPhoneNumber() != null) {
+            number = pendingCallDetails.getPhoneNumber();
+            Log.d(TAG, "Using CallScreeningService number: " + number);
+
+            // CẬP NHẬT SIM INFO VÀO pendingCallDetails
+            if (!simSlotInfo.equals("UNKNOWN")) {
+                pendingCallDetails.setSimSlotInfo(simSlotInfo);
+                pendingCallDetails.setSubscriptionId(subscriptionId);
+                Log.d(TAG, "✓ Updated SIM info in CallDetails");
+            }
+
+        } else if (pendingNumberFromBroadcast != null) {
+            number = pendingNumberFromBroadcast;
+            Log.d(TAG, "Using broadcast number: " + number);
+
+            // Ensure CallDetailsHolder exists
+            if (pendingCallDetails == null) {
+                pendingCallDetails = new CallDetailsHolder();
+                pendingCallDetails.setPhoneNumber(number);
+                pendingCallDetails.setVerificationStatus("UNKNOWN");
+                pendingCallDetails.setHandlePresentation("ALLOWED");
+                pendingCallDetails.setCallerDisplayName("");
+            }
+
+            // CẬP NHẬT SIM INFO
+            pendingCallDetails.setSimSlotInfo(simSlotInfo);
+            pendingCallDetails.setSubscriptionId(subscriptionId);
+        }
+
+        if (number != null) {
+            Log.d(TAG, "📱 Final call info - Number: " + number +
+                    ", SIM: " + simSlotInfo + ", SubID: " + subscriptionId);
+            answerCall();
+        } else {
+            Log.w(TAG, "Number not ready, waiting...");
+        }
+    }
     private void handleOffhookState() {
-        // NEW: Delegate to handler
-        delayedHandler.onOffhook(callDataManager);
+        if (!isCallActive && pendingCallDetails != null) {
+            isCallActive = true;
+            callStartTime = System.currentTimeMillis();
+            Log.d(TAG, "CALL STARTED: " + pendingCallDetails.getPhoneNumber());
+            callDataManager.onCallStarted(pendingCallDetails);
+        }
     }
 
-    /**
-     * IDLE: Cuộc gọi kết thúc → Lưu log và transcribe
-     */
     private void handleIdleState() {
         if (isCallActive && pendingCallDetails != null) {
             isCallActive = false;
@@ -230,31 +370,14 @@ public class AutoReceiveSpamService extends Service {
             Log.d(TAG, "CALL ENDED: " + pendingCallDetails.getPhoneNumber() +
                     " (duration: " + (duration / 1000) + "s)");
 
-            callDataManager.onCallEnded(
-                    pendingCallDetails,
-                    callStartTime,
-                    duration
-            );
-
-            // Reset
-            pendingCallDetails = null;
-            callStartTime = 0;
-            // NEW: Reset handler
-            delayedHandler.onIdle();
+            callDataManager.onCallEnded(pendingCallDetails, callStartTime, duration);
         }
-    }
 
-    // NEW: Static method for receiver to notify number received
-    public static void onNumberReceived(String number) {
-        if (instance != null) {
-            instance.onNumberReceivedInternal(number);
-        }
-    }
-
-    // NEW: Instance method
-    private void onNumberReceivedInternal(String number) {
-        // NEW: Delegate to handler
-        delayedHandler.onNumberReceived(number);
+        // Reset all state
+        pendingCallDetails = null;
+        pendingNumberFromBroadcast = null;
+        isRinging = false;
+        callStartTime = 0;
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -262,19 +385,16 @@ public class AutoReceiveSpamService extends Service {
     // ═══════════════════════════════════════════════════════════════════
 
     private void answerCall() {
-        Log.d(TAG, "answerCall: Checking permissions");
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
                 != PackageManager.PERMISSION_GRANTED) {
             Log.e(TAG, "Missing ANSWER_PHONE_CALLS permission");
             return;
         }
 
-        Log.d(TAG, "answerCall: TelecomManager is " + (telecomManager != null ? "not null" : "null"));
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && telecomManager != null) {
-                Log.d(TAG, "answerCall: Calling acceptRingingCall");
                 telecomManager.acceptRingingCall();
-                Log.d(TAG, "Call answered via TelecomManager");
+                Log.d(TAG, "Call answered");
             } else {
                 Log.e(TAG, "Cannot answer: API < 26 or TelecomManager null");
             }
@@ -283,28 +403,8 @@ public class AutoReceiveSpamService extends Service {
         }
     }
 
-    // NEW: Combined method to answer call and start processing with number
-    private void answerAndStartCall(String phoneNumber) {
-        // Answer the call
-        answerCall();
-
-        // Set up call details
-        CallDetailsHolder holder = new CallDetailsHolder();
-        holder.setPhoneNumber(phoneNumber);
-        holder.setVerificationStatus("UNKNOWN");
-        holder.setHandlePresentation("ALLOWED");
-        holder.setCallerDisplayName(""); // Empty, as we don't have actual caller name
-        pendingCallDetails = holder;
-
-        // Start call processing
-        isCallActive = true;
-        callStartTime = System.currentTimeMillis();
-        Log.d(TAG, "CALL STARTED: " + phoneNumber);
-        callDataManager.onCallStarted(pendingCallDetails);
-    }
-
     // ═══════════════════════════════════════════════════════════════════
-    // ACCESSIBILITY (BỎ TRỐNG)
+    // LIFECYCLE
     // ═══════════════════════════════════════════════════════════════════
 
     @Override
@@ -317,12 +417,16 @@ public class AutoReceiveSpamService extends Service {
             telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE);
         }
 
+        unregisterReceiver(numberReceiver);
+        unregisterReceiver(callDetailsReceiver);
+
         if (handler != null) {
             handler.removeCallbacksAndMessages(null);
         }
 
-        Log.d(TAG, "🛑 Service Destroyed");
+        Log.d(TAG, "Service Destroyed");
     }
+
     private void startAsForeground() {
         String channelId = "honeypot_call_service";
 
@@ -351,5 +455,4 @@ public class AutoReceiveSpamService extends Service {
 
         startForeground(1, notification);
     }
-
 }
